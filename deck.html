@@ -1,0 +1,2029 @@
+<!DOCTYPE html>
+<html lang="ko" data-scheme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Marketing OS · Architecture Proposal for ARMACADEEP</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,600;0,8..60,700;1,8..60,400;1,8..60,500;1,8..60,600&family=DM+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Serif+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<script>
+  // Safety net: if GSAP doesn't load within 2 seconds, reveal everything
+  setTimeout(function() {
+    if (typeof gsap === 'undefined' || !document.body || !document.body.classList.contains('gsap-ran')) {
+      if (document.body) {
+        document.body.classList.add('gsap-fallback');
+        console.warn('GSAP timeout — fallback engaged (everything visible).');
+      }
+    }
+  }, 2000);
+</script>
+<style>
+  :root {
+    /* Signal palette */
+    --bg: #1C2644;
+    --bg-alt: #232F55;
+    --bg-deep: #161E36;
+    --bg-light: #F0ECE3;
+    --fg: #E2DCD0;
+    --fg-2: #8A96A8;
+    --fg-3: #4E5A6E;
+    --fg-light: #1A2030;
+    --fg-light-2: #5A6270;
+    --accent: #C8A870;
+    --accent-bright: #D9B883;
+    --accent-deep: #8A7340;
+    --border: #2E3D5C;
+    --border-light: #CAC4B4;
+    --gold-tint: rgba(200, 168, 112, 0.08);
+    --gold-glow: rgba(200, 168, 112, 0.22);
+
+    /* Signal type stack */
+    --f-display: 'Source Serif 4', 'Noto Serif KR', Georgia, serif;
+    --f-body: 'Pretendard', 'DM Sans', system-ui, sans-serif;
+    --f-mono: 'IBM Plex Mono', 'JetBrains Mono', monospace;
+  }
+
+  html[lang="en"] {
+    --f-display: 'Source Serif 4', Georgia, serif;
+    --f-body: 'DM Sans', system-ui, sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    width: 100%;
+    height: 100vh;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--f-body);
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    scroll-behavior: smooth;
+    color-scheme: dark;
+  }
+
+  body {
+    overflow-y: scroll;
+    scroll-snap-type: y mandatory;
+  }
+
+  /* ============ Slide ============ */
+  .slide {
+    width: 100vw;
+    min-height: 100vh;
+    padding: 96px 7.5vw 8vh;  /* top: 96px so chrome clears the fixed lang-toggle (~80px tall with 3 buttons) */
+    position: relative;
+    scroll-snap-align: start;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .slide.light {
+    background: var(--bg-light);
+    color: var(--fg-light);
+  }
+
+  /* Chrome — page label / counter / accent line */
+  .chrome {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: var(--f-mono);
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--fg-3);
+    margin-bottom: 5vh;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--border);
+  }
+  .light .chrome { color: var(--fg-light-3); border-bottom-color: var(--border-light); }
+  .chrome .accent { color: var(--accent); }
+  .chrome b { color: var(--fg); font-weight: 500; }
+  .light .chrome b { color: var(--fg-light); }
+
+  .slide-foot {
+    position: absolute;
+    bottom: 3vh;
+    left: 7.5vw;
+    right: 7.5vw;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: var(--f-mono);
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--fg-3);
+    padding-top: 14px;
+    border-top: 1px dashed var(--border);
+  }
+  .light .slide-foot { color: var(--fg-light-3); border-top-color: var(--border-light); }
+
+  /* ============ Typography ============ */
+  h1, h2, h3 {
+    font-family: var(--f-display);
+    font-weight: 500;
+    letter-spacing: -0.015em;
+    line-height: 1.1;
+  }
+  html[lang="ko"] h1, html[lang="ko"] h2, html[lang="ko"] h3 {
+    font-family: 'Noto Serif KR', serif;
+    font-weight: 600;
+  }
+  h1 em, h2 em, h3 em { font-style: italic; color: var(--accent); font-weight: 400; }
+  html[lang="ko"] h1 em, html[lang="ko"] h2 em { font-style: normal; color: var(--accent); font-weight: 700; }
+
+  .kicker {
+    font-family: var(--f-mono);
+    font-size: 11px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 500;
+    margin-bottom: 28px;
+  }
+  .gold-bar {
+    width: 56px;
+    height: 2px;
+    background: var(--accent);
+    margin-bottom: 28px;
+  }
+
+  /* ============ Slide 01 — COVER ============ */
+  .cover { justify-content: space-between; }
+  .cover-center { flex: 1; display: flex; flex-direction: column; justify-content: center; max-width: 1100px; }
+  .cover h1 {
+    font-size: clamp(3rem, 7vw, 6.5rem);
+    line-height: 1.05;
+    margin-bottom: 36px;
+  }
+  .cover .sub {
+    font-family: var(--f-display);
+    font-size: clamp(1.2rem, 2vw, 1.8rem);
+    font-style: italic;
+    color: var(--fg-2);
+    max-width: 720px;
+    line-height: 1.5;
+  }
+  html[lang="ko"] .cover .sub { font-style: normal; font-weight: 500; }
+  .cover-meta {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0;
+    padding-top: 32px;
+    border-top: 1px solid var(--border);
+  }
+  .cover-meta-item { padding: 0 28px; border-right: 1px solid var(--border); }
+  .cover-meta-item:first-child { padding-left: 0; }
+  .cover-meta-item:last-child { padding-right: 0; border-right: 0; }
+  .cover-meta-label {
+    font-family: var(--f-mono);
+    font-size: 10px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--fg-3);
+    margin-bottom: 8px;
+  }
+  .cover-meta-value {
+    font-family: var(--f-display);
+    font-size: 20px;
+    font-weight: 500;
+    color: var(--accent);
+  }
+  html[lang="ko"] .cover-meta-value { font-family: 'Noto Serif KR', serif; font-weight: 600; }
+
+  /* ============ Slide 02 — Big Picture ============ */
+  .arch-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+    margin-top: 4vh;
+    flex: 1;
+    align-items: stretch;
+  }
+  .arch-card {
+    background: var(--bg-alt);
+    border: 1px solid var(--border);
+    border-top: 3px solid var(--accent);
+    padding: 32px 28px;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    transition: all 0.3s ease;
+  }
+  .arch-card:hover {
+    border-top-color: var(--accent-bright);
+    background: var(--bg-deep);
+    transform: translateY(-4px);
+  }
+  .arch-card-num {
+    font-family: var(--f-display);
+    font-size: 56px;
+    font-weight: 400;
+    font-style: italic;
+    color: var(--accent);
+    line-height: 1;
+    letter-spacing: -0.03em;
+    margin-bottom: 12px;
+  }
+  .arch-card-tag {
+    font-family: var(--f-mono);
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--fg-3);
+    margin-bottom: 8px;
+  }
+  .arch-card-title {
+    font-family: var(--f-display);
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--fg);
+    line-height: 1.25;
+    margin-bottom: 16px;
+  }
+  html[lang="ko"] .arch-card-title { font-family: 'Noto Serif KR', serif; }
+  .arch-card-desc {
+    font-size: 13.5px;
+    color: var(--fg-2);
+    line-height: 1.6;
+    margin-bottom: 18px;
+    flex: 1;
+  }
+  .arch-card-tech {
+    font-family: var(--f-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+    padding-top: 14px;
+    border-top: 1px dashed var(--border);
+    line-height: 1.7;
+  }
+  .arch-flow {
+    text-align: center;
+    margin-top: 4vh;
+    padding-top: 24px;
+    border-top: 1px dashed var(--border);
+    font-family: var(--f-mono);
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    color: var(--fg-2);
+    text-transform: uppercase;
+  }
+  .arch-flow b { color: var(--accent); font-weight: 600; }
+
+  /* ============ Slide 03/04/05 — System Detail ============ */
+  .sys-layout {
+    display: grid;
+    grid-template-columns: 1.1fr 1fr;
+    gap: 56px;
+    flex: 1;
+    align-items: start;
+    padding-top: 2vh;
+  }
+  .sys-left { padding-top: 2vh; }
+  .sys-num {
+    font-family: var(--f-display);
+    font-size: 84px;
+    font-style: italic;
+    color: var(--accent);
+    line-height: 0.9;
+    letter-spacing: -0.04em;
+    margin-bottom: 14px;
+  }
+  .sys-label {
+    font-family: var(--f-mono);
+    font-size: 11px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 18px;
+  }
+  .sys-title {
+    font-family: var(--f-display);
+    font-size: clamp(2rem, 3.5vw, 3rem);
+    font-weight: 500;
+    color: var(--fg);
+    line-height: 1.15;
+    margin-bottom: 22px;
+    letter-spacing: -0.015em;
+  }
+  html[lang="ko"] .sys-title { font-family: 'Noto Serif KR', serif; font-weight: 600; }
+  .sys-lead {
+    font-size: 16px;
+    color: var(--fg-2);
+    line-height: 1.75;
+    margin-bottom: 32px;
+    max-width: 480px;
+  }
+  .sys-callout {
+    background: var(--gold-tint);
+    border: 1px solid var(--accent-deep);
+    border-left: 3px solid var(--accent);
+    padding: 18px 22px;
+    font-family: var(--f-mono);
+    font-size: 11.5px;
+    letter-spacing: 0.06em;
+    color: var(--accent-bright);
+    line-height: 1.6;
+    text-transform: uppercase;
+  }
+  html[lang="ko"] .sys-callout {
+    font-family: 'Pretendard', sans-serif;
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: 13px;
+    line-height: 1.7;
+  }
+
+  .sys-right {
+    background: var(--bg-alt);
+    border: 1px solid var(--border);
+    padding: 36px 32px;
+    position: relative;
+  }
+  .sys-right::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; width: 4px; height: 100%;
+    background: var(--accent);
+  }
+  .flow-step {
+    display: grid;
+    grid-template-columns: 32px 1fr;
+    gap: 16px;
+    padding: 14px 0;
+    border-bottom: 1px dashed var(--border);
+  }
+  .flow-step:last-child { border-bottom: 0; }
+  .flow-step-num {
+    font-family: var(--f-mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    color: var(--accent);
+    padding-top: 3px;
+  }
+  .flow-step-text {
+    font-size: 14.5px;
+    color: var(--fg);
+    line-height: 1.55;
+  }
+  .flow-step-text b { color: var(--accent-bright); font-weight: 600; }
+  .flow-step-sub {
+    display: block;
+    font-family: var(--f-mono);
+    font-size: 10.5px;
+    color: var(--fg-3);
+    letter-spacing: 0.04em;
+    margin-top: 4px;
+  }
+
+  /* ============ Slide 06 — Tech Stack ============ */
+  .stack-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    margin-top: 3vh;
+    flex: 1;
+    align-content: start;
+  }
+  .stack-card {
+    background: var(--bg-alt);
+    border: 1px solid var(--border);
+    padding: 20px 18px;
+    position: relative;
+    transition: all 0.2s ease;
+  }
+  .stack-card:hover {
+    border-color: var(--accent);
+    background: var(--bg-deep);
+  }
+  .stack-card-cat {
+    font-family: var(--f-mono);
+    font-size: 9.5px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 10px;
+  }
+  .stack-card-name {
+    font-family: var(--f-display);
+    font-size: 19px;
+    font-weight: 600;
+    color: var(--fg);
+    margin-bottom: 8px;
+    letter-spacing: -0.01em;
+  }
+  .stack-card-role {
+    font-size: 12px;
+    color: var(--fg-2);
+    line-height: 1.5;
+  }
+  .stack-card-tier {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    font-family: var(--f-mono);
+    font-size: 9px;
+    color: var(--fg-3);
+    letter-spacing: 0.1em;
+  }
+
+  /* ============ Slide 07 — Roadmap ============ */
+  .roadmap {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 28px;
+    margin-top: 3vh;
+    flex: 1;
+  }
+  .phase {
+    background: var(--bg-alt);
+    border: 1px solid var(--border);
+    padding: 36px 32px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+  .phase-mark {
+    display: inline-block;
+    font-family: var(--f-mono);
+    font-size: 10px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--bg-deep);
+    background: var(--accent);
+    padding: 5px 12px;
+    margin-bottom: 18px;
+    width: fit-content;
+    font-weight: 600;
+  }
+  .phase-title {
+    font-family: var(--f-display);
+    font-size: 28px;
+    font-weight: 600;
+    color: var(--fg);
+    margin-bottom: 8px;
+    letter-spacing: -0.01em;
+  }
+  html[lang="ko"] .phase-title { font-family: 'Noto Serif KR', serif; }
+  .phase-when {
+    font-family: var(--f-mono);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    color: var(--fg-2);
+    margin-bottom: 22px;
+  }
+  .phase-list {
+    list-style: none;
+    margin-bottom: 24px;
+    flex: 1;
+  }
+  .phase-list li {
+    font-size: 13.5px;
+    color: var(--fg-2);
+    line-height: 1.55;
+    padding: 8px 0 8px 22px;
+    position: relative;
+    border-bottom: 1px dashed var(--border);
+  }
+  .phase-list li:last-child { border-bottom: 0; }
+  .phase-list li::before {
+    content: '→';
+    position: absolute;
+    left: 0;
+    color: var(--accent);
+    font-family: var(--f-mono);
+    font-weight: 500;
+  }
+  .phase-price {
+    padding-top: 18px;
+    border-top: 1px solid var(--border);
+  }
+  .phase-price-label {
+    font-family: var(--f-mono);
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--fg-3);
+    margin-bottom: 6px;
+  }
+  .phase-price-value {
+    font-family: var(--f-display);
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--accent);
+    letter-spacing: -0.01em;
+  }
+  .roadmap-foot {
+    grid-column: 1 / -1;
+    margin-top: 14px;
+    padding: 18px 22px;
+    background: var(--bg-deep);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    font-family: var(--f-mono);
+    font-size: 11px;
+    color: var(--fg-2);
+    letter-spacing: 0.06em;
+    line-height: 1.7;
+  }
+  .roadmap-foot b { color: var(--accent); font-weight: 500; }
+
+  /* ============ Slide 08 — Next Steps ============ */
+  .closing-layout {
+    display: grid;
+    grid-template-columns: 1.1fr 1fr;
+    gap: 56px;
+    flex: 1;
+    align-items: center;
+    padding: 4vh 0;
+  }
+  .closing-left h2 {
+    font-size: clamp(2.4rem, 4.5vw, 4rem);
+    line-height: 1.1;
+    margin-bottom: 28px;
+  }
+  .closing-lead {
+    font-size: 17px;
+    color: var(--fg-2);
+    line-height: 1.7;
+    margin-bottom: 28px;
+    max-width: 520px;
+  }
+  .closing-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--accent);
+    color: var(--bg-deep);
+    padding: 18px 32px;
+    font-family: var(--f-mono);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    text-decoration: none;
+    transition: all 0.2s ease;
+  }
+  .closing-cta:hover {
+    background: var(--accent-bright);
+    transform: translateY(-2px);
+    box-shadow: 0 12px 32px -10px var(--gold-glow);
+  }
+  .closing-questions {
+    background: var(--bg-alt);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    padding: 32px 28px;
+  }
+  .closing-questions-title {
+    font-family: var(--f-mono);
+    font-size: 11px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 18px;
+  }
+  .closing-questions ol {
+    list-style: none;
+    counter-reset: q;
+  }
+  .closing-questions li {
+    counter-increment: q;
+    padding: 12px 0 12px 30px;
+    border-bottom: 1px dashed var(--border);
+    position: relative;
+    font-size: 14px;
+    color: var(--fg);
+    line-height: 1.55;
+  }
+  .closing-questions li:last-child { border-bottom: 0; }
+  .closing-questions li::before {
+    content: counter(q, decimal-leading-zero);
+    position: absolute;
+    left: 0;
+    top: 14px;
+    font-family: var(--f-mono);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--accent);
+    letter-spacing: 0.06em;
+  }
+
+  /* ============ Slide 07 — Open-Source Stack Table ============ */
+  .os-table {
+    margin-top: 3vh;
+    border: 1px solid var(--border);
+    background: var(--bg-alt);
+    flex: 1;
+  }
+  .os-row {
+    display: grid;
+    grid-template-columns: 1.2fr 1.6fr 1.4fr 2.4fr;
+    gap: 0;
+    border-bottom: 1px solid var(--border);
+    padding: 14px 22px;
+    align-items: center;
+    transition: background 0.2s ease;
+  }
+  .os-row:last-child { border-bottom: 0; }
+  .os-row:hover:not(.os-head) { background: var(--bg-deep); }
+  .os-head {
+    background: var(--bg-deep);
+    font-family: var(--f-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 600;
+    border-bottom: 2px solid var(--accent-deep);
+    padding: 16px 22px;
+  }
+  .os-tool { font-family: var(--f-display); font-size: 17px; color: var(--accent); font-weight: 600; letter-spacing: -0.01em; }
+  html[lang="ko"] .os-tool { font-family: 'Noto Serif KR', serif; }
+  .os-role { font-size: 13px; color: var(--fg); line-height: 1.5; }
+  .os-gh { font-size: 11px; color: var(--fg-2); line-height: 1.5; }
+  .os-gh code { font-family: var(--f-mono); color: var(--accent-bright); font-size: 11px; }
+  .os-star { font-family: var(--f-mono); font-size: 11px; color: var(--accent); letter-spacing: 0.06em; }
+  .os-risk { font-size: 12.5px; color: var(--fg-2); line-height: 1.55; }
+  .os-risk b { color: var(--accent-bright); font-weight: 600; }
+
+  .os-foot {
+    margin-top: 24px;
+    background: var(--bg-deep);
+    border: 1px solid var(--accent-deep);
+    border-left: 4px solid var(--accent);
+    padding: 22px 28px;
+    display: grid;
+    grid-template-columns: auto auto 1fr;
+    gap: 32px;
+    align-items: center;
+  }
+  .os-foot-key { font-family: var(--f-mono); font-size: 10px; letter-spacing: 0.22em; color: var(--fg-3); text-transform: uppercase; line-height: 1.5; }
+  .os-foot-val { font-family: var(--f-display); font-size: 32px; font-weight: 700; color: var(--accent); letter-spacing: -0.02em; }
+  html[lang="ko"] .os-foot-val { font-family: 'Noto Serif KR', serif; }
+  .os-foot-note { font-size: 12px; color: var(--fg-2); line-height: 1.55; }
+
+  /* ============ Slide 08 — Three Options ============ */
+  .opt-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 18px;
+    margin-top: 3vh;
+    flex: 1;
+    align-items: stretch;
+  }
+  .opt-card {
+    background: var(--bg-alt);
+    border: 1px solid var(--border);
+    padding: 28px 24px 24px;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    transition: all 0.3s ease;
+  }
+  .opt-card:hover {
+    background: var(--bg-deep);
+    border-color: var(--accent-deep);
+    transform: translateY(-4px);
+  }
+  .opt-card.opt-recommended {
+    background: linear-gradient(180deg, rgba(200,168,112,0.10) 0%, var(--bg-alt) 60%);
+    border-color: var(--accent);
+    border-top: 3px solid var(--accent);
+  }
+  .opt-card.opt-recommended:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 18px 40px -20px var(--gold-glow);
+  }
+  .opt-badge {
+    position: absolute;
+    top: -1px;
+    right: -1px;
+    background: var(--accent);
+    color: var(--bg-deep);
+    padding: 5px 12px;
+    font-family: var(--f-mono);
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+  .opt-letter {
+    font-family: var(--f-display);
+    font-size: 64px;
+    font-style: italic;
+    color: var(--accent);
+    line-height: 0.9;
+    letter-spacing: -0.04em;
+    margin-bottom: 6px;
+  }
+  .opt-tag {
+    font-family: var(--f-mono);
+    font-size: 9.5px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--fg-3);
+    margin-bottom: 12px;
+  }
+  .opt-title {
+    font-family: var(--f-display);
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--fg);
+    line-height: 1.25;
+    margin-bottom: 12px;
+    letter-spacing: -0.01em;
+  }
+  html[lang="ko"] .opt-title { font-family: 'Noto Serif KR', serif; }
+  .opt-stack {
+    font-family: var(--f-mono);
+    font-size: 10.5px;
+    color: var(--accent);
+    line-height: 1.5;
+    padding-bottom: 14px;
+    border-bottom: 1px dashed var(--border);
+    margin-bottom: 14px;
+    letter-spacing: 0.02em;
+  }
+  .opt-price {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 16px;
+    font-family: var(--f-mono);
+    font-size: 11px;
+    color: var(--fg-3);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+  .opt-price b {
+    font-family: var(--f-display);
+    font-size: 26px;
+    color: var(--accent);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    text-transform: none;
+  }
+  .opt-price-sub {
+    font-family: var(--f-mono);
+    font-size: 10px;
+    color: var(--fg-3);
+    margin-left: 4px;
+  }
+  .opt-list {
+    list-style: none;
+    flex: 1;
+    margin-bottom: 14px;
+  }
+  .opt-list li {
+    font-size: 12.5px;
+    color: var(--fg);
+    line-height: 1.55;
+    padding: 7px 0 7px 22px;
+    position: relative;
+    border-bottom: 1px dashed rgba(46, 61, 92, 0.5);
+  }
+  .opt-list li:last-child { border-bottom: 0; }
+  .opt-list li.pro::before {
+    content: '+';
+    position: absolute;
+    left: 0;
+    top: 5px;
+    color: var(--accent);
+    font-family: var(--f-mono);
+    font-weight: 600;
+    font-size: 14px;
+  }
+  .opt-list li.con::before {
+    content: '−';
+    position: absolute;
+    left: 0;
+    top: 5px;
+    color: var(--fg-3);
+    font-family: var(--f-mono);
+    font-weight: 600;
+    font-size: 14px;
+  }
+  .opt-fit {
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
+    font-family: var(--f-mono);
+    font-size: 10.5px;
+    color: var(--accent);
+    line-height: 1.6;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  html[lang="ko"] .opt-fit, html[lang="zh"] .opt-fit {
+    text-transform: none;
+    font-family: var(--f-body);
+    font-size: 12px;
+    letter-spacing: 0;
+  }
+
+  .opt-cta {
+    margin-top: 24px;
+    background: var(--bg-deep);
+    border: 1px solid var(--accent-deep);
+    border-left: 4px solid var(--accent);
+    padding: 18px 26px;
+    font-size: 14px;
+    color: var(--fg);
+    line-height: 1.6;
+    text-align: center;
+  }
+  .opt-cta b {
+    color: var(--accent-bright);
+    font-family: var(--f-mono);
+    background: rgba(200, 168, 112, 0.12);
+    padding: 3px 10px;
+    letter-spacing: 0.06em;
+  }
+
+  /* ============ GSAP entrance baseline (will be animated in) ============ */
+  .anim-fade { opacity: 0; }
+  .anim-up { opacity: 0; transform: translateY(24px); }
+  .anim-down { opacity: 0; transform: translateY(-16px); }
+  .anim-right { opacity: 0; transform: translateX(-24px); }
+  .anim-left { opacity: 0; transform: translateX(24px); }
+  .anim-scale { opacity: 0; transform: scale(0.94); }
+  .anim-bar { transform: scaleX(0); transform-origin: left center; }
+  .anim-num { opacity: 0; transform: translateY(12px) scale(0.92); }
+
+  /* Respect reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    .anim-fade, .anim-up, .anim-down, .anim-right, .anim-left, .anim-scale, .anim-num {
+      opacity: 1 !important;
+      transform: none !important;
+    }
+    .anim-bar { transform: scaleX(1) !important; }
+  }
+
+/* GSAP entrances use .from() — elements stay visible by default */
+
+  /* Safety: if GSAP never runs (CDN blocked / offline), reveal everything after 2s */
+  .gsap-fallback .slide:not(.cover) .chrome,
+  .gsap-fallback .slide:not(.cover) .kicker,
+  .gsap-fallback .slide:not(.cover) h2,
+  .gsap-fallback .slide:not(.cover) .section-label,
+  .gsap-fallback .slide:not(.cover) .sys-label,
+  .gsap-fallback .slide:not(.cover) .sys-num,
+  .gsap-fallback .slide:not(.cover) .sys-lead,
+  .gsap-fallback .slide:not(.cover) .sys-callout,
+  .gsap-fallback .slide:not(.cover) .arch-card,
+  .gsap-fallback .slide:not(.cover) .arch-flow,
+  .gsap-fallback .slide:not(.cover) .stack-card,
+  .gsap-fallback .slide:not(.cover) .os-row,
+  .gsap-fallback .slide:not(.cover) .os-foot,
+  .gsap-fallback .slide:not(.cover) .opt-card,
+  .gsap-fallback .slide:not(.cover) .opt-cta,
+  .gsap-fallback .slide:not(.cover) .flow-step,
+  .gsap-fallback .slide:not(.cover) .phase,
+  .gsap-fallback .slide:not(.cover) .roadmap-foot,
+  .gsap-fallback .slide:not(.cover) .closing-left > *,
+  .gsap-fallback .slide:not(.cover) .closing-questions,
+  .gsap-fallback .cover .chrome,
+  .gsap-fallback .cover h1,
+  .gsap-fallback .cover .sub,
+  .gsap-fallback .cover .cover-meta-item {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  /* ============ Lang Toggle ============ */
+  .lang-toggle {
+    position: fixed;
+    top: 24px;
+    left: 24px;
+    z-index: 9999;
+    display: inline-flex;
+    background: rgba(28, 38, 68, 0.92);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--accent-deep);
+    padding: 3px;
+  }
+  .lang-toggle button {
+    border: 0;
+    background: transparent;
+    padding: 8px 16px;
+    font-family: var(--f-mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    color: var(--fg-2);
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .lang-toggle button.active {
+    background: var(--accent);
+    color: var(--bg-deep);
+    font-weight: 600;
+  }
+
+  /* Slide indicator (top-right) */
+  .nav-counter {
+    position: fixed;
+    top: 24px;
+    right: 24px;
+    z-index: 99;
+    font-family: var(--f-mono);
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    color: var(--fg-3);
+    background: rgba(28, 38, 68, 0.92);
+    backdrop-filter: blur(12px);
+    padding: 10px 16px;
+    border: 1px solid var(--border);
+  }
+  .nav-counter b { color: var(--accent); font-weight: 600; }
+  .light + .nav-counter, .slide.light .nav-counter { color: var(--fg-light-3); }
+
+  /* ============ Lang Visibility ============ */
+  .ko, .en, .zh { display: none; }
+  html[lang="ko"] .ko { display: inline; }
+  html[lang="en"] .en { display: inline; }
+  html[lang="zh"] .zh { display: inline; }
+  .ko-block, .en-block, .zh-block { display: none; }
+  html[lang="ko"] .ko-block { display: block; }
+  html[lang="en"] .en-block { display: block; }
+  html[lang="zh"] .zh-block { display: block; }
+  html[lang="zh"] body { font-family: 'Noto Sans SC', 'PingFang SC', 'Hiragino Sans GB', system-ui, sans-serif; }
+  html[lang="zh"] h1, html[lang="zh"] h2, html[lang="zh"] h3 { font-family: 'Noto Serif KR', 'Noto Serif SC', 'PingFang SC', serif; font-weight: 700; }
+
+  /* ============ Responsive ============ */
+  @media (max-width: 900px) {
+    .slide { padding: 5vh 6vw 7vh; }
+    .arch-grid { grid-template-columns: 1fr; gap: 16px; }
+    .sys-layout, .closing-layout { grid-template-columns: 1fr; gap: 28px; }
+    .stack-grid { grid-template-columns: repeat(2, 1fr); }
+    .roadmap { grid-template-columns: 1fr; }
+    .cover-meta { grid-template-columns: 1fr; gap: 14px; }
+    .cover-meta-item { padding: 0 0 14px; border-right: 0; border-bottom: 1px solid var(--border); }
+    .cover-meta-item:last-child { border-bottom: 0; padding-bottom: 0; }
+    .lang-toggle { top: 14px; left: 14px; }
+    .nav-counter { top: 14px; right: 14px; padding: 8px 12px; font-size: 10px; }
+    .slide-foot { font-size: 9px; left: 6vw; right: 6vw; }
+  }
+
+  @media print {
+    body { scroll-snap-type: none; }
+    .slide { min-height: auto; page-break-after: always; }
+    .lang-toggle, .nav-counter { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Lang Toggle -->
+<div class="lang-toggle" role="group">
+  <button id="btn-ko" class="active" onclick="setLang('ko')">한국어</button>
+  <button id="btn-en" onclick="setLang('en')">ENGLISH</button>
+  <button id="btn-zh" onclick="setLang('zh')">中文</button>
+</div>
+
+<!-- Slide Counter -->
+<div class="nav-counter"><b id="cur">01</b> / 10</div>
+
+<!-- ╔══════════════════════════════════════════════════════════════════════╗ -->
+<!-- ║  SLIDE 01 · COVER                                                    ║ -->
+<!-- ╚══════════════════════════════════════════════════════════════════════╝ -->
+<section class="slide cover" data-idx="1">
+  <div class="chrome">
+    <span><b>HUGO STUDIO</b> · WEB · APP · BRAND · AI</span>
+    <span class="accent">NO. 01 · 2026</span>
+  </div>
+
+  <div class="cover-center">
+    <div class="kicker">
+      <span class="ko">아키텍처 제안서 · ARMACADEEP</span>
+      <span class="en">ARCHITECTURE PROPOSAL · ARMACADEEP</span><span class="zh">架构提案 · ARMACADEEP</span>
+    </div>
+    <div class="gold-bar"></div>
+    <h1>
+      <span class="ko">AI 마케팅 <em>OS</em><br>아르마카딥을 위한 시스템 제안</span>
+      <span class="en">AI Marketing <em>OS</em><br>Built for ARMACADEEP</span>
+    </h1>
+    <p class="sub">
+      <span class="ko">3 개의 핵심 시스템 — 공식 API 기반 · 안전 · 확장 가능. 대표님 계정과 브랜드 보호를 1 순위 설계 원칙으로 삼았습니다.</span>
+      <span class="en">Three core systems — official APIs only, account-safe, scalable. Built around protecting your brand accounts first.</span><span class="zh">三大核心系统 — 仅使用官方 API · 账号安全 · 可扩展。围绕保护你的品牌账号优先设计。</span>
+    </p>
+  </div>
+
+  <div class="cover-meta">
+    <div class="cover-meta-item">
+      <div class="cover-meta-label"><span class="ko">대상</span><span class="en">For</span><span class="zh">致</span></div>
+      <div class="cover-meta-value">Tim · ARMACADEEP</div>
+    </div>
+    <div class="cover-meta-item">
+      <div class="cover-meta-label"><span class="ko">제안</span><span class="en">From</span><span class="zh">来自</span></div>
+      <div class="cover-meta-value">Hugo Studio · 2026</div>
+    </div>
+    <div class="cover-meta-item">
+      <div class="cover-meta-label"><span class="ko">버전</span><span class="en">Draft</span><span class="zh">版本</span></div>
+      <div class="cover-meta-value">v1.0 · Architecture</div>
+    </div>
+  </div>
+</section>
+
+<!-- ╔══════════════════════════════════════════════════════════════════════╗ -->
+<!-- ║  SLIDE 02 · BIG PICTURE — 3 SUBSYSTEMS                               ║ -->
+<!-- ╚══════════════════════════════════════════════════════════════════════╝ -->
+<section class="slide" data-idx="2">
+  <div class="chrome">
+    <span><b>PART I</b> · <span class="ko">전체 아키텍처</span><span class="en">BIG PICTURE</span><span class="zh">整体架构</span></span>
+    <span>02 / 10</span>
+  </div>
+
+  <div style="max-width: 760px;">
+    <div class="kicker">
+      <span class="ko">3 개의 시스템 · 하나의 OS</span>
+      <span class="en">THREE SYSTEMS · ONE OS</span><span class="zh">三大系统 · 一个 OS</span>
+    </div>
+    <h2 style="font-size: clamp(1.8rem, 3.5vw, 2.6rem); margin-bottom: 16px;">
+      <span class="ko">대표님의 3 가지 요구사항에 1:1로 매핑된 구조입니다.</span>
+      <span class="en">Each of your three requirements maps to a dedicated subsystem.</span><span class="zh">你提的 3 个需求 1:1 映射到对应子系统。</span>
+    </h2>
+    <p style="font-size: 15px; color: var(--fg-2); max-width: 600px;">
+      <span class="ko">콘텐츠 생성·승인 워크플로우·경쟁사 모니터링 — 세 시스템이 Notion 데이터베이스를 중심으로 연결됩니다.</span>
+      <span class="en">Content engine · approval inbox · competitor intel — three subsystems connected through a single Notion database as the source of truth.</span><span class="zh">内容引擎 · 审核收件箱 · 竞品监控 — 三个子系统通过同一个 Notion 数据库作为单一信任源连接。</span>
+    </p>
+  </div>
+
+  <div class="arch-grid">
+    <!-- Card 1 -->
+    <div class="arch-card">
+      <div class="arch-card-num">I</div>
+      <div class="arch-card-tag">SYSTEM ONE</div>
+      <h3 class="arch-card-title">
+        <span class="ko">콘텐츠 엔진</span>
+        <span class="en">Content Engine</span><span class="zh">内容引擎</span>
+      </h3>
+      <p class="arch-card-desc">
+        <span class="ko">AI 가 카피·이미지·릴스 영상을 생성합니다. 봇 없음, 스크래핑 없음 — Meta Graph API 만 사용.</span>
+        <span class="en">AI generates copy, images, Reels. Zero bots, zero scraping — Meta Graph API only.</span><span class="zh">AI 生成文案 · 图片 · Reels 视频。零 bot · 零爬虫 — 只用 Meta Graph API。</span>
+      </p>
+      <div class="arch-card-tech">
+        Claude · GPT · Sora · Meta Graph API
+      </div>
+    </div>
+
+    <!-- Card 2 -->
+    <div class="arch-card">
+      <div class="arch-card-num">II</div>
+      <div class="arch-card-tag">SYSTEM TWO</div>
+      <h3 class="arch-card-title">
+        <span class="ko">승인 워크플로우</span>
+        <span class="en">Approval Inbox</span><span class="zh">审核收件箱</span>
+      </h3>
+      <p class="arch-card-desc">
+        <span class="ko">Notion 에 모든 생성물이 모입니다. 대표님이 검토하고 Approve 한 뒤에만 발행됩니다.</span>
+        <span class="en">Everything lands in Notion first. Nothing publishes without your explicit "Approve" click.</span><span class="zh">所有内容先进 Notion。没有你的「Approve」点击，什么都不会发布。</span>
+      </p>
+      <div class="arch-card-tech">
+        Notion DB · Webhook · Cloudflare Worker
+      </div>
+    </div>
+
+    <!-- Card 3 -->
+    <div class="arch-card">
+      <div class="arch-card-num">III</div>
+      <div class="arch-card-tag">SYSTEM THREE</div>
+      <h3 class="arch-card-title">
+        <span class="ko">경쟁사 인텔리전스</span>
+        <span class="en">Competitor Intel</span><span class="zh">竞品监控</span>
+      </h3>
+      <p class="arch-card-desc">
+        <span class="ko">한국 경쟁사의 공개 데이터만 자동 수집·분석. 오픈소스 기반 · 월 운영비 거의 0 원.</span>
+        <span class="en">Tracks public competitor data only. Open-source stack · near-zero monthly cost.</span><span class="zh">只采集竞品公开数据。开源工具栈 · 月运营成本接近 0。</span>
+      </p>
+      <div class="arch-card-tech">
+        yt-dlp · Instaloader · Whisper
+      </div>
+    </div>
+  </div>
+
+  <div class="arch-flow">
+    <span class="ko"><b>AI 생성</b> → Notion 검토 → <b>대표님 승인</b> → 공식 API 발행</span>
+    <span class="en"><b>AI Generate</b> → Notion Review → <b>Your Approval</b> → Official API Publish</span><span class="zh"><b>AI 生成</b> → Notion 审核 → <b>你的批准</b> → 官方 API 发布</span>
+  </div>
+
+  <div class="slide-foot">
+    <span>HUGO STUDIO · 2026</span>
+    <span><span class="ko">전체 아키텍처</span><span class="en">BIG PICTURE</span><span class="zh">整体架构</span></span>
+  </div>
+</section>
+
+<!-- ╔══════════════════════════════════════════════════════════════════════╗ -->
+<!-- ║  SLIDE 03 · SYSTEM 01 — CONTENT GENERATION + PUBLISHING              ║ -->
+<!-- ╚══════════════════════════════════════════════════════════════════════╝ -->
+<section class="slide" data-idx="3">
+  <div class="chrome">
+    <span><b>SYSTEM I</b> · <span class="ko">콘텐츠 엔진</span><span class="en">CONTENT ENGINE</span><span class="zh">内容引擎</span></span>
+    <span>03 / 10</span>
+  </div>
+
+  <div class="sys-layout">
+    <div class="sys-left">
+      <div class="sys-num">I</div>
+      <div class="sys-label">
+        <span class="ko">콘텐츠 생성 + 공식 발행</span>
+        <span class="en">CONTENT GENERATION + PUBLISHING</span><span class="zh">内容生成 + 发布</span>
+      </div>
+      <h2 class="sys-title">
+        <span class="ko">봇 없이, <em>오직</em><br>공식 API 로만.</span>
+        <span class="en"><em>Official</em> Meta<br>Graph API. Only.</span>
+      </h2>
+      <p class="sys-lead">
+        <span class="ko">Selenium · Puppeteer · 브라우저 스크래퍼는 사용하지 않습니다. 대표님의 브랜드 계정 영구 정지 리스크를 원천 차단하는 것이 1 순위 원칙입니다.</span>
+        <span class="en">No Selenium, no Puppeteer, no browser automation. Protecting your brand accounts from permanent bans is the #1 non-negotiable.</span><span class="zh">不用 Selenium · 不用 Puppeteer · 不用浏览器自动化。保护你的品牌账号免被永久封禁是第一不可妥协原则。</span>
+      </p>
+      <div class="sys-callout">
+        <span class="ko">✓ Meta App 등록 · Instagram Business + Threads 연동 · Graph API 발행<br>✓ 계정 영구 정지 리스크 0</span>
+        <span class="en">✓ Registered Meta App + IG Business + Threads · Graph API publish<br>✓ Zero ban risk · Zero scraping</span>
+      </div>
+    </div>
+
+    <div class="sys-right">
+      <div style="font-family: var(--f-mono); font-size: 10px; letter-spacing: 0.22em; color: var(--accent); margin-bottom: 18px; text-transform: uppercase;">
+        <span class="ko">처리 흐름 · 5 단계</span>
+        <span class="en">5-STEP FLOW</span><span class="zh">5 步流程</span>
+      </div>
+      <div class="flow-step">
+        <div class="flow-step-num">01.</div>
+        <div class="flow-step-text">
+          <span class="ko">AI 가 카피·이미지·릴스 영상 초안 생성</span>
+          <span class="en">AI drafts copy + image + Reel video</span><span class="zh">AI 起草文案 + 图片 + Reel 视频</span>
+          <span class="flow-step-sub">Claude · GPT-4 · Sora · Runway</span>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-step-num">02.</div>
+        <div class="flow-step-text">
+          <span class="ko">한국 광고법 자동 점검 (효능·과장 표현 필터)</span>
+          <span class="en">Korean ad-law pre-check (efficacy claims filter)</span><span class="zh">韩国广告法预检（效果宣传词过滤）</span>
+          <span class="flow-step-sub">Rule-based + LLM moderation</span>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-step-num">03.</div>
+        <div class="flow-step-text">
+          <span class="ko"><b>Notion 데이터베이스</b>로 저장 — 검토 대기</span>
+          <span class="en">Saved to <b>Notion DB</b> — awaiting review</span><span class="zh">存入 <b>Notion 数据库</b> — 等待审核</span>
+          <span class="flow-step-sub">Notion API · Status: Draft</span>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-step-num">04.</div>
+        <div class="flow-step-text">
+          <span class="ko">대표님이 "Approve" 토글 클릭</span>
+          <span class="en">You toggle "Approve" in Notion</span><span class="zh">你在 Notion 中切换「Approve」</span>
+          <span class="flow-step-sub">Notion Webhook trigger</span>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-step-num">05.</div>
+        <div class="flow-step-text">
+          <span class="ko"><b>Meta Graph API</b> 로 IG · Threads 자동 발행</span>
+          <span class="en">Auto-publish to IG · Threads via <b>Graph API</b></span><span class="zh">通过 <b>Meta Graph API</b> 自动发布到 IG · Threads</span>
+          <span class="flow-step-sub">Instagram Business + Threads API</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="slide-foot">
+    <span>HUGO STUDIO · 2026</span>
+    <span>SYSTEM I · CONTENT</span>
+  </div>
+</section>
+
+<!-- ╔══════════════════════════════════════════════════════════════════════╗ -->
+<!-- ║  SLIDE 04 · SYSTEM 02 — APPROVAL WORKFLOW                            ║ -->
+<!-- ╚══════════════════════════════════════════════════════════════════════╝ -->
+<section class="slide" data-idx="4">
+  <div class="chrome">
+    <span><b>SYSTEM II</b> · <span class="ko">승인 워크플로우</span><span class="en">APPROVAL INBOX</span><span class="zh">审核收件箱</span></span>
+    <span>04 / 10</span>
+  </div>
+
+  <div class="sys-layout">
+    <div class="sys-left">
+      <div class="sys-num">II</div>
+      <div class="sys-label">
+        <span class="ko">Human-in-the-Loop · 승인 게이트</span>
+        <span class="en">HUMAN-IN-THE-LOOP · APPROVAL GATE</span><span class="zh">人工把关 · 审核门</span>
+      </div>
+      <h2 class="sys-title">
+        <span class="ko">대표님의 손이 <em>마지막</em><br>관문입니다.</span>
+        <span class="en">You stay <em>in control.</em><br>Always.</span>
+      </h2>
+      <p class="sys-lead">
+        <span class="ko">AI 가 환각을 일으키거나 광고법을 위반할 가능성은 항상 존재합니다. 그래서 어떤 콘텐츠도 대표님의 직접 승인 없이 발행되지 않습니다.</span>
+        <span class="en">AI hallucinations and ad-law violations are real risks. So no content publishes without your explicit click — period.</span><span class="zh">AI 幻觉和广告法违规是真实风险。所以没有你的明确点击，什么内容都不会发布 — 一条铁律。</span>
+      </p>
+      <div class="sys-callout">
+        <span class="ko">✓ Notion DB 가 단일 진실 공급원 (Single Source of Truth)<br>✓ 모바일에서도 승인 가능 (Notion 앱)<br>✓ 발행 기록 자동 보관 · 추적 가능</span>
+        <span class="en">✓ Notion DB = single source of truth<br>✓ Approve from anywhere (Notion mobile app)<br>✓ Full audit trail · every action logged</span>
+      </div>
+    </div>
+
+    <div class="sys-right">
+      <div style="font-family: var(--f-mono); font-size: 10px; letter-spacing: 0.22em; color: var(--accent); margin-bottom: 18px; text-transform: uppercase;">
+        <span class="ko">Notion DB 스키마</span>
+        <span class="en">NOTION DB SCHEMA</span><span class="zh">Notion 数据库结构</span>
+      </div>
+      <div class="flow-step">
+        <div class="flow-step-num">▸</div>
+        <div class="flow-step-text">
+          <span class="ko"><b>제목</b> — AI 생성 카피 헤드라인</span>
+          <span class="en"><b>Title</b> — AI-generated headline</span><span class="zh"><b>标题</b> — AI 生成的标题</span>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-step-num">▸</div>
+        <div class="flow-step-text">
+          <span class="ko"><b>미디어</b> — 이미지/영상 미리보기</span>
+          <span class="en"><b>Media</b> — image/video preview</span><span class="zh"><b>媒体</b> — 图片/视频预览</span>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-step-num">▸</div>
+        <div class="flow-step-text">
+          <span class="ko"><b>플랫폼</b> — IG · Threads · 둘 다</span>
+          <span class="en"><b>Platform</b> — IG · Threads · Both</span><span class="zh"><b>平台</b> — IG · Threads · 两者皆可</span>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-step-num">▸</div>
+        <div class="flow-step-text">
+          <span class="ko"><b>광고법 점검 결과</b> — 통과/주의/실패</span>
+          <span class="en"><b>Ad-law check</b> — Pass / Warn / Fail</span><span class="zh"><b>广告法检查</b> — 通过 / 注意 / 不过</span>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-step-num">▸</div>
+        <div class="flow-step-text">
+          <span class="ko"><b>예약 시간</b> — 즉시 또는 예약</span>
+          <span class="en"><b>Scheduled</b> — Now or scheduled</span><span class="zh"><b>定时</b> — 即时或预约</span>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-step-num">▸</div>
+        <div class="flow-step-text">
+          <span class="ko"><b>상태 토글</b> · Draft → Approve → Published</span>
+          <span class="en"><b>Status toggle</b> · Draft → Approve → Published</span><span class="zh"><b>状态切换</b> · Draft → Approve → Published</span>
+          <span class="flow-step-sub">Webhook triggers on "Approve"</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="slide-foot">
+    <span>HUGO STUDIO · 2026</span>
+    <span>SYSTEM II · APPROVAL</span>
+  </div>
+</section>
+
+<!-- ╔══════════════════════════════════════════════════════════════════════╗ -->
+<!-- ║  SLIDE 05 · SYSTEM 03 — COMPETITOR INTELLIGENCE                      ║ -->
+<!-- ╚══════════════════════════════════════════════════════════════════════╝ -->
+<section class="slide" data-idx="5">
+  <div class="chrome">
+    <span><b>SYSTEM III</b> · <span class="ko">경쟁사 인텔리전스</span><span class="en">COMPETITOR INTEL</span><span class="zh">竞品监控</span></span>
+    <span>05 / 10</span>
+  </div>
+
+  <div class="sys-layout">
+    <div class="sys-left">
+      <div class="sys-num">III</div>
+      <div class="sys-label">
+        <span class="ko">자동 경쟁사 모니터링 · 주간 리포트</span>
+        <span class="en">AUTO COMPETITOR TRACKING · WEEKLY REPORT</span><span class="zh">自动竞品追踪 · 每周报告</span>
+      </div>
+      <h2 class="sys-title">
+        <span class="ko">합법 · 안전 ·<br><em>자동화.</em></span>
+        <span class="en">Compliant.<br>Safe. <em>Automated.</em></span>
+      </h2>
+      <p class="sys-lead">
+        <span class="ko">YouTube 는 공식 Data API + yt-dlp 로, Instagram 은 오픈소스 Instaloader 로 공개 데이터만 익명 수집합니다. <b>대표님 계정은 어느 시스템에도 로그인하지 않습니다.</b> 외부 SaaS 비용 없이 운영합니다.</span>
+        <span class="en">YouTube via official Data API + yt-dlp. Instagram via open-source Instaloader, anonymous mode, public data only. <b>Your brand account never touches the scraper.</b> Zero SaaS fees.</span><span class="zh">YouTube 走官方 Data API + yt-dlp。Instagram 走开源的 Instaloader，匿名模式，只取公开数据。<b>Tim 的品牌账号绝不接触爬虫。</b> 零 SaaS 费用。</span>
+      </p>
+      <div class="sys-callout">
+        <span class="ko">✓ Instaloader · yt-dlp · 모두 오픈소스 (월 0 원)<br>✓ 공개 데이터만 · 익명 모드 · 계정 로그인 0<br>✓ YouTube Data API 무료 쿼터 + Whisper 자막 추출</span>
+        <span class="en">✓ Instaloader · yt-dlp · all open-source (zero fees)<br>✓ Public data only · anonymous mode · zero account login<br>✓ YouTube Data API free quota + Whisper transcription</span>
+      </div>
+    </div>
+
+    <div class="sys-right">
+      <div style="font-family: var(--f-mono); font-size: 10px; letter-spacing: 0.22em; color: var(--accent); margin-bottom: 18px; text-transform: uppercase;">
+        <span class="ko">주간 파이프라인 · 매주 월요일</span>
+        <span class="en">WEEKLY PIPELINE · EVERY MONDAY</span><span class="zh">每周流水线 · 每周一</span>
+      </div>
+      <div class="flow-step">
+        <div class="flow-step-num">01.</div>
+        <div class="flow-step-text">
+          <span class="ko">한국어 키워드로 검색 (아르기닌·피로회복·남성영양제 등)</span>
+          <span class="en">Search Korean keywords (아르기닌, 피로회복, 남성영양제, etc)</span><span class="zh">用韩文关键词搜索（아르기닌 · 피로회복 · 남성영양제 等）</span>
+          <span class="flow-step-sub">YouTube Data API + Instaloader (anon)</span>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-step-num">02.</div>
+        <div class="flow-step-text">
+          <span class="ko">상위 30 개 경쟁사 계정 자동 발굴</span>
+          <span class="en">Auto-discover top 30 competitor accounts</span><span class="zh">自动发现 Top 30 竞品账号</span>
+          <span class="flow-step-sub">Engagement-weighted ranking</span>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-step-num">03.</div>
+        <div class="flow-step-text">
+          <span class="ko">각 계정의 좋아요·댓글 상위 게시물 추출</span>
+          <span class="en">Extract top posts by Likes / Comments per account</span><span class="zh">提取每个账号点赞/评论数最高的帖子</span>
+          <span class="flow-step-sub">Instaloader · yt-dlp · Data API</span>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-step-num">04.</div>
+        <div class="flow-step-text">
+          <span class="ko">Whisper 로 영상 자막 자동 추출</span>
+          <span class="en">Whisper transcribes video audio → text</span><span class="zh">Whisper 把视频音频转成字幕</span>
+          <span class="flow-step-sub">OpenAI Whisper API</span>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-step-num">05.</div>
+        <div class="flow-step-text">
+          <span class="ko">AI 가 바이럴 후크 패턴 분석</span>
+          <span class="en">AI analyzes hooks · viral patterns</span><span class="zh">AI 分析钩子 · 爆款规律</span>
+          <span class="flow-step-sub">Claude/GPT structured analysis</span>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-step-num">06.</div>
+        <div class="flow-step-text">
+          <span class="ko"><b>"Competitor Viral Report"</b> Notion 자동 작성</span>
+          <span class="en"><b>"Competitor Viral Report"</b> auto-written to Notion</span><span class="zh"><b>「Competitor Viral Report」</b> 自动写入 Notion</span>
+          <span class="flow-step-sub">Notion API · Markdown + Embeds</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="slide-foot">
+    <span>HUGO STUDIO · 2026</span>
+    <span>SYSTEM III · INTEL</span>
+  </div>
+</section>
+
+<!-- ╔══════════════════════════════════════════════════════════════════════╗ -->
+<!-- ║  SLIDE 06 · TECH STACK                                               ║ -->
+<!-- ╚══════════════════════════════════════════════════════════════════════╝ -->
+<section class="slide" data-idx="6">
+  <div class="chrome">
+    <span><b>PART II</b> · <span class="ko">기술 스택</span><span class="en">TECH STACK</span><span class="zh">技术栈</span></span>
+    <span>06 / 10</span>
+  </div>
+
+  <div style="max-width: 760px;">
+    <div class="kicker">
+      <span class="ko">검증된 도구 12 개 · 오픈소스 + 공식</span>
+      <span class="en">12 PROVEN TOOLS · OPEN-SOURCE + OFFICIAL</span><span class="zh">12 个验证过的工具 · 开源 + 官方</span>
+    </div>
+    <h2 style="font-size: clamp(1.8rem, 3.5vw, 2.6rem); margin-bottom: 16px;">
+      <span class="ko">실험적인 도구는 없습니다 — 모두 검증된 오픈소스 또는 공식 서비스.</span>
+      <span class="en">No experimental tools — every layer is a proven open-source or official service.</span><span class="zh">没有实验性工具 — 每一层都是验证过的开源或官方服务。</span>
+    </h2>
+  </div>
+
+  <div class="stack-grid">
+    <div class="stack-card">
+      <div class="stack-card-tier">CORE</div>
+      <div class="stack-card-cat">Publish</div>
+      <div class="stack-card-name">Meta Graph API</div>
+      <div class="stack-card-role"><span class="ko">IG · Threads 공식 발행</span><span class="en">Official IG + Threads publish</span><span class="zh">IG · Threads 官方发布</span></div>
+    </div>
+    <div class="stack-card">
+      <div class="stack-card-tier">CORE</div>
+      <div class="stack-card-cat">Database</div>
+      <div class="stack-card-name">Notion API</div>
+      <div class="stack-card-role"><span class="ko">승인 인박스 · 단일 관리 허브</span><span class="en">Approval inbox · single source of truth</span><span class="zh">审核收件箱 · 单一信任源</span></div>
+    </div>
+    <div class="stack-card">
+      <div class="stack-card-tier">CORE</div>
+      <div class="stack-card-cat">Storage</div>
+      <div class="stack-card-name">Google Drive</div>
+      <div class="stack-card-role"><span class="ko">미디어 자산 백업</span><span class="en">Backup for media assets</span><span class="zh">媒体资产备份</span></div>
+    </div>
+    <div class="stack-card">
+      <div class="stack-card-tier">INTEL</div>
+      <div class="stack-card-cat">IG Scraper</div>
+      <div class="stack-card-name">Instaloader</div>
+      <div class="stack-card-role"><span class="ko">오픈소스 · 익명 · 공개 데이터만 · 무료</span><span class="en">Open-source · anonymous · public data only · free</span><span class="zh">开源 · 匿名 · 仅公开数据 · 免费</span></div>
+    </div>
+    <div class="stack-card">
+      <div class="stack-card-tier">INTEL</div>
+      <div class="stack-card-cat">YouTube</div>
+      <div class="stack-card-name">yt-dlp + Data API</div>
+      <div class="stack-card-role"><span class="ko">오픈소스 + 공식 API · 무료</span><span class="en">Open-source + official API · free</span><span class="zh">开源 + 官方 API · 免费</span></div>
+    </div>
+    <div class="stack-card">
+      <div class="stack-card-tier">INTEL</div>
+      <div class="stack-card-cat">Transcribe</div>
+      <div class="stack-card-name">OpenAI Whisper</div>
+      <div class="stack-card-role"><span class="ko">영상 자막 자동 추출</span><span class="en">Video → transcript</span><span class="zh">视频 → 字幕</span></div>
+    </div>
+    <div class="stack-card">
+      <div class="stack-card-tier">AI</div>
+      <div class="stack-card-cat">Copy / Analyze</div>
+      <div class="stack-card-name">Claude · GPT-4</div>
+      <div class="stack-card-role"><span class="ko">한국어 카피 생성 · 경쟁사 분석</span><span class="en">Korean copy · competitor analysis</span><span class="zh">韩文文案 · 竞品分析</span></div>
+    </div>
+    <div class="stack-card">
+      <div class="stack-card-tier">AI</div>
+      <div class="stack-card-cat">Video</div>
+      <div class="stack-card-name">Sora · Runway</div>
+      <div class="stack-card-role"><span class="ko">릴스 영상 자동 생성</span><span class="en">Reels video auto-generation</span><span class="zh">Reels 视频自动生成</span></div>
+    </div>
+    <div class="stack-card">
+      <div class="stack-card-tier">RUNTIME</div>
+      <div class="stack-card-cat">Backend</div>
+      <div class="stack-card-name">Cloudflare Worker</div>
+      <div class="stack-card-role"><span class="ko">웹훅 · 스케줄러</span><span class="en">Webhook router · scheduler</span><span class="zh">Webhook 路由 · 定时器</span></div>
+    </div>
+    <div class="stack-card">
+      <div class="stack-card-tier">RUNTIME</div>
+      <div class="stack-card-cat">Storage</div>
+      <div class="stack-card-name">Cloudflare R2</div>
+      <div class="stack-card-role"><span class="ko">영상·이미지 호스팅</span><span class="en">Media hosting</span><span class="zh">媒体托管</span></div>
+    </div>
+    <div class="stack-card">
+      <div class="stack-card-tier">RUNTIME</div>
+      <div class="stack-card-cat">Monitoring</div>
+      <div class="stack-card-name">Sentry · Plausible</div>
+      <div class="stack-card-role"><span class="ko">에러 추적 · 사용량 통계</span><span class="en">Error + usage tracking</span><span class="zh">错误 + 用量监控</span></div>
+    </div>
+    <div class="stack-card">
+      <div class="stack-card-tier">RUNTIME</div>
+      <div class="stack-card-cat">Auth</div>
+      <div class="stack-card-name">Meta Business</div>
+      <div class="stack-card-role"><span class="ko">앱 등록 · OAuth</span><span class="en">App registration + OAuth</span><span class="zh">App 注册 + OAuth</span></div>
+    </div>
+  </div>
+
+  <div class="slide-foot">
+    <span>HUGO STUDIO · 2026</span>
+    <span>TECH STACK</span>
+  </div>
+</section>
+
+
+<!-- ╔══════════════════════════════════════════════════════════════════════╗ -->
+<!-- ║  SLIDE 07 · OPEN-SOURCE STACK DETAILS                                ║ -->
+<!-- ╚══════════════════════════════════════════════════════════════════════╝ -->
+<section class="slide" data-idx="7">
+  <div class="chrome">
+    <span><b>PART II · DETAIL</b> · <span class="ko">오픈소스 스택 상세</span><span class="en">OPEN-SOURCE STACK</span><span class="zh">开源工具栈细节</span></span>
+    <span>07 / 10</span>
+  </div>
+
+  <div style="max-width: 820px;">
+    <div class="kicker">
+      <span class="ko">대표님이 꼭 아셔야 할 것들</span>
+      <span class="en">WHAT YOU SHOULD KNOW</span>
+      <span class="zh">你需要了解的细节</span>
+    </div>
+    <h2 style="font-size: clamp(1.7rem, 3.2vw, 2.4rem); margin-bottom: 16px;">
+      <span class="ko">투명하게 모두 공개합니다 — 어떤 도구로, 어떤 위험을, 어떻게 다루는지.</span>
+      <span class="en">Full transparency — every tool, every risk, every mitigation.</span>
+      <span class="zh">完全透明 — 每个工具、每个风险、每个应对方案。</span>
+    </h2>
+  </div>
+
+  <div class="os-table">
+    <div class="os-row os-head">
+      <div><span class="ko">도구</span><span class="en">TOOL</span><span class="zh">工具</span></div>
+      <div><span class="ko">역할</span><span class="en">ROLE</span><span class="zh">角色</span></div>
+      <div>GITHUB · STAR</div>
+      <div><span class="ko">위험 · 비용</span><span class="en">RISK · COST</span><span class="zh">风险 · 成本</span></div>
+    </div>
+
+    <div class="os-row">
+      <div class="os-tool"><b>Instaloader</b></div>
+      <div class="os-role"><span class="ko">IG 공개 데이터 익명 수집</span><span class="en">IG public data · anonymous</span><span class="zh">IG 公开数据匿名抓取</span></div>
+      <div class="os-gh"><code>instaloader/instaloader</code><br><span class="os-star">★ 12.5k</span></div>
+      <div class="os-risk"><span class="ko">Hugo 운영 서버 IP 일시 차단 24-72h 가능 (<b>대표님 계정과 무관</b>)</span><span class="en">Hugo's hosting server IP may be temp-blocked 24-72h (<b>does not affect your account</b>)</span><span class="zh">Hugo 服务器 IP 可能临时被封 24-72h（<b>与你账号无关</b>）</span></div>
+    </div>
+
+    <div class="os-row">
+      <div class="os-tool"><b>yt-dlp</b></div>
+      <div class="os-role"><span class="ko">YouTube Shorts 메타데이터</span><span class="en">YouTube Shorts metadata</span><span class="zh">YouTube Shorts 元数据</span></div>
+      <div class="os-gh"><code>yt-dlp/yt-dlp</code><br><span class="os-star">★ 167k</span></div>
+      <div class="os-risk"><span class="ko">낮음 — YouTube 정책이 Meta 보다 훨씬 관대합니다</span><span class="en">Low — YouTube is more lenient than Meta</span><span class="zh">低 — YouTube 比 Meta 宽松</span></div>
+    </div>
+
+    <div class="os-row">
+      <div class="os-tool"><b>YouTube Data API v3</b></div>
+      <div class="os-role"><span class="ko">공식 API 보완</span><span class="en">Official API supplement</span><span class="zh">官方 API 补充</span></div>
+      <div class="os-gh"><span class="ko">구글 공식</span><span class="en">Google official</span><span class="zh">Google 官方</span><br><span class="os-star">—</span></div>
+      <div class="os-risk"><span class="ko">0 — 무료 쿼터 10,000 units/일</span><span class="en">Zero — free quota 10,000 units/day</span><span class="zh">0 — 免费 quota 10,000 units/天</span></div>
+    </div>
+
+    <div class="os-row">
+      <div class="os-tool"><b>OpenAI Whisper</b></div>
+      <div class="os-role"><span class="ko">영상 자막 자동 추출</span><span class="en">Video → transcript</span><span class="zh">视频字幕转录</span></div>
+      <div class="os-gh"><span class="ko">OpenAI 공식</span><span class="en">OpenAI official</span><span class="zh">OpenAI 官方</span><br><span class="os-star">—</span></div>
+      <div class="os-risk"><span class="ko">$0.006/분 · Shorts 30 개/주 ≈ $0.10</span><span class="en">$0.006/min · 30 Shorts/week ≈ $0.10</span><span class="zh">$0.006/分钟 · 30 个 Shorts/周 ≈ $0.10</span></div>
+    </div>
+
+    <div class="os-row">
+      <div class="os-tool"><b>Cloudflare Worker</b></div>
+      <div class="os-role"><span class="ko">프록시 · 스케줄러</span><span class="en">Proxy · scheduler</span><span class="zh">代理 + 定时器</span></div>
+      <div class="os-gh">Cloudflare<br><span class="os-star">—</span></div>
+      <div class="os-risk"><span class="ko">무료 tier (월 100k 요청)</span><span class="en">Free tier (100k req/mo)</span><span class="zh">免费 tier（月 10 万次请求）</span></div>
+    </div>
+
+    <div class="os-row">
+      <div class="os-tool"><b>GitHub Actions</b></div>
+      <div class="os-role"><span class="ko">정기 트리거 · CI/CD</span><span class="en">Scheduled trigger · CI/CD</span><span class="zh">定时触发 · CI/CD</span></div>
+      <div class="os-gh">GitHub<br><span class="os-star">—</span></div>
+      <div class="os-risk"><span class="ko">무료 2,000 분/월</span><span class="en">Free 2,000 min/mo</span><span class="zh">免费 2000 分钟/月</span></div>
+    </div>
+  </div>
+
+  <div class="os-foot">
+    <div class="os-foot-key">
+      <span class="ko">월 총 운영비 추정</span>
+      <span class="en">EST. MONTHLY OPS COST</span>
+      <span class="zh">月运营成本估算</span>
+    </div>
+    <div class="os-foot-val">$ 0 — $ 3</div>
+    <div class="os-foot-note">
+      <span class="ko">AI 분석 + Whisper 실제 사용량만 — 그 외 모두 무료</span>
+      <span class="en">AI analysis + Whisper usage only — everything else is free</span>
+      <span class="zh">仅 AI 分析 + Whisper 实际用量 · 其他全免费</span>
+    </div>
+  </div>
+
+  <div class="slide-foot">
+    <span>HUGO STUDIO · 2026</span>
+    <span>OPEN-SOURCE STACK</span>
+  </div>
+</section>
+
+<!-- ╔══════════════════════════════════════════════════════════════════════╗ -->
+<!-- ║  SLIDE 08 · THREE OPTIONS · TIM PICKS                                ║ -->
+<!-- ╚══════════════════════════════════════════════════════════════════════╝ -->
+<section class="slide" data-idx="8">
+  <div class="chrome">
+    <span><b>PART II · CHOICE</b> · <span class="ko">대표님이 선택</span><span class="en">YOU CHOOSE</span><span class="zh">你来选</span></span>
+    <span>08 / 10</span>
+  </div>
+
+  <div style="max-width: 820px;">
+    <div class="kicker">
+      <span class="ko">3 가지 옵션 · 어느 쪽이 맞으실까요?</span>
+      <span class="en">THREE OPTIONS · WHICH FITS BEST?</span>
+      <span class="zh">3 种方案 · 你觉得哪个最合适？</span>
+    </div>
+    <h2 style="font-size: clamp(1.7rem, 3.2vw, 2.4rem); margin-bottom: 12px;">
+      <span class="ko">어느 옵션을 선택하시더라도, <em>대표님 계정은 완전히 보호됩니다.</em></span>
+      <span class="en">Whichever option you pick, <em>your account stays fully protected.</em></span>
+      <span class="zh">无论选哪个 — 你的账号<em>都安全</em>。</span>
+    </h2>
+    <p style="font-size: 14px; color: var(--fg-2); max-width: 680px; margin-bottom: 16px;">
+      <span class="ko">어느 시스템도 대표님의 계정으로 로그인하지 않습니다. 차이는 운영 비용과 서버 유지보수를 누가 담당하느냐입니다.</span>
+      <span class="en">None of these systems log in with your account. The only difference is who handles the ops cost and server maintenance.</span>
+      <span class="zh">没有一个方案会用你的账号登录。区别只在「谁来承担运营成本和服务器维护」。</span>
+    </p>
+  </div>
+
+  <div class="opt-grid">
+
+    <div class="opt-card opt-recommended">
+      <div class="opt-badge">
+        <span class="ko">권장</span>
+        <span class="en">RECOMMENDED</span>
+        <span class="zh">推荐</span>
+      </div>
+      <div class="opt-letter">A</div>
+      <div class="opt-tag">100% OPEN-SOURCE</div>
+      <h3 class="opt-title">
+        <span class="ko">순수 오픈소스 + 자체 VPS</span>
+        <span class="en">Pure Open-Source + Your VPS</span>
+        <span class="zh">纯开源 + 自有 VPS</span>
+      </h3>
+      <div class="opt-stack">Instaloader · yt-dlp · Webshare proxy · Cloudflare Worker</div>
+      <div class="opt-price">
+        <span class="ko">월</span><span class="en">/mo</span><span class="zh">每月</span>
+        <b>$ 0 — $ 3</b>
+      </div>
+      <ul class="opt-list">
+        <li class="pro"><span class="ko">외부 SaaS 0 · 100% 통제</span><span class="en">Zero SaaS · 100% control</span><span class="zh">0 SaaS · 100% 掌控</span></li>
+        <li class="pro"><span class="ko">장기 확장 자유로움</span><span class="en">Scales freely long-term</span><span class="zh">长期扩展自由</span></li>
+        <li class="con"><span class="ko">월 약 1 시간 유지보수 필요</span><span class="en">~1 hr/mo maintenance</span><span class="zh">每月约 1 小时维护</span></li>
+        <li class="con"><span class="ko">IG API 변경 시 패치 작업</span><span class="en">Patch when IG changes API</span><span class="zh">IG 改 API 时要打补丁</span></li>
+      </ul>
+      <div class="opt-fit">
+        <span class="ko">적합: 비용 최소화 + 장기 운영을 원하실 때</span>
+        <span class="en">FIT: minimize cost · long-term ops</span>
+        <span class="zh">适合：想最低成本 + 长期运营</span>
+      </div>
+    </div>
+
+    <div class="opt-card">
+      <div class="opt-letter">B</div>
+      <div class="opt-tag">APIFY FREE TIER</div>
+      <h3 class="opt-title">
+        <span class="ko">Apify 무료 tier</span>
+        <span class="en">Apify Free Tier</span>
+        <span class="zh">Apify 免费 tier</span>
+      </h3>
+      <div class="opt-stack">Apify SaaS · $5 credit/mo · ~1,200 posts</div>
+      <div class="opt-price">
+        <span class="ko">월</span><span class="en">/mo</span><span class="zh">每月</span>
+        <b>$ 0</b><span class="opt-price-sub">($5 credit)</span>
+      </div>
+      <ul class="opt-list">
+        <li class="pro"><span class="ko">규정 준수는 Apify 가 책임</span><span class="en">Apify handles compliance</span><span class="zh">合规交给 Apify</span></li>
+        <li class="pro"><span class="ko">빠른 셋업 · MVP 검증에 적합</span><span class="en">Fast setup · ideal for MVP</span><span class="zh">快速搭建 · MVP 验证</span></li>
+        <li class="con"><span class="ko">계정 30 개 · 주 50 건 초과 시 유료 전환</span><span class="en">Paid once scaling beyond 30 accts/wk</span><span class="zh">扩展到 30+ 账号会超额</span></li>
+        <li class="con"><span class="ko">서드파티 SaaS 에 의존</span><span class="en">3rd-party SaaS dependency</span><span class="zh">依赖第三方 SaaS</span></li>
+      </ul>
+      <div class="opt-fit">
+        <span class="ko">적합: MVP 빠른 검증 단계</span>
+        <span class="en">FIT: fast MVP validation</span>
+        <span class="zh">适合：MVP 快速验证</span>
+      </div>
+    </div>
+
+    <div class="opt-card">
+      <div class="opt-letter">C</div>
+      <div class="opt-tag">CRAWLEE FRAMEWORK</div>
+      <h3 class="opt-title">
+        <span class="ko">Crawlee (Apify 오픈소스)</span>
+        <span class="en">Crawlee (Apify's OSS)</span>
+        <span class="zh">Crawlee（Apify 开源框架）</span>
+      </h3>
+      <div class="opt-stack">crawlee/crawlee · self-hosted on your VPS</div>
+      <div class="opt-price">
+        <span class="ko">월</span><span class="en">/mo</span><span class="zh">每月</span>
+        <b>$ 0 — $ 3</b>
+      </div>
+      <ul class="opt-list">
+        <li class="pro"><span class="ko">기업급 안티봇 처리 내장</span><span class="en">Enterprise-grade anti-bot built-in</span><span class="zh">企业级反爬虫内置</span></li>
+        <li class="pro"><span class="ko">Apify 사가 공식 유지보수</span><span class="en">Officially maintained by Apify</span><span class="zh">Apify 公司官方维护</span></li>
+        <li class="con"><span class="ko">옵션 A 보다 셋업 복잡</span><span class="en">More complex setup than A</span><span class="zh">比方案 A 部署复杂</span></li>
+        <li class="con"><span class="ko">학습 곡선 있음</span><span class="en">Learning curve required</span><span class="zh">有学习曲线</span></li>
+      </ul>
+      <div class="opt-fit">
+        <span class="ko">적합: 장기 운영 + 향후 확장 대비</span>
+        <span class="en">FIT: long-term + future scaling</span>
+        <span class="zh">适合：长期运营 + 准备扩展</span>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="opt-cta">
+    <div style="font-family: var(--f-mono); font-size: 11px; color: var(--accent-bright); letter-spacing: 0.06em; margin-bottom: 10px;">
+      A = 오픈소스 VPS · B = APIFY · C = CRAWLEE
+    </div>
+    <span class="ko">WhatsApp 으로 <b>「A · B · C」</b> 알려주시겠어요? — 그다음 단계로 바로 넘어가겠습니다.</span>
+    <span class="en">WhatsApp me <b>"A · B · C"</b> — I'll proceed with the chosen path.</span>
+    <span class="zh">WhatsApp 告诉我 <b>「A · B · C」</b> — 我就按那条路线推进。</span>
+  </div>
+
+  <div class="slide-foot">
+    <span>HUGO STUDIO · 2026</span>
+    <span>THREE OPTIONS · YOU CHOOSE</span>
+  </div>
+</section>
+
+<!-- ╔══════════════════════════════════════════════════════════════════════╗ -->
+<!-- ║  SLIDE 09 · ROADMAP + TIMELINE                                     ║ -->
+<!-- ╚══════════════════════════════════════════════════════════════════════╝ -->
+<section class="slide" data-idx="9">
+  <div class="chrome">
+    <span><b>PART III</b> · <span class="ko">로드맵 · 일정</span><span class="en">ROADMAP · TIMELINE</span><span class="zh">路线图 · 时间表</span></span>
+    <span>09 / 10</span>
+  </div>
+
+  <div style="max-width: 760px;">
+    <div class="kicker">
+      <span class="ko">2 단계 출시 · 4 개월</span>
+      <span class="en">TWO PHASES · FOUR MONTHS</span><span class="zh">两个阶段 · 四个月</span>
+    </div>
+    <h2 style="font-size: clamp(1.8rem, 3.5vw, 2.6rem); margin-bottom: 16px;">
+      <span class="ko">위험을 분산하고 가치를 빠르게 확인할 수 있는 단계적 출시.</span>
+      <span class="en">Phased rollout — de-risks the spend, validates value before going deeper.</span><span class="zh">分阶段上线 — 降低风险，先验证价值再深入。</span>
+    </h2>
+  </div>
+
+  <div class="roadmap">
+    <div class="phase">
+      <div class="phase-mark">PHASE 1 · MONTH 1-2</div>
+      <h3 class="phase-title">
+        <span class="ko">콘텐츠 + 승인 시스템</span>
+        <span class="en">Content + Approval</span><span class="zh">内容 + 审核</span>
+      </h3>
+      <div class="phase-when">
+        <span class="ko">2026 년 7 월 → 8 월 출시</span>
+        <span class="en">JULY → AUGUST 2026</span><span class="zh">2026 年 7 月 → 8 月</span>
+      </div>
+      <ul class="phase-list">
+        <li><span class="ko">Meta Business 계정 등록 · App 검토 신청</span><span class="en">Meta Business setup · App review</span><span class="zh">Meta Business 账号配置 · App 审核</span></li>
+        <li><span class="ko">Notion 승인 DB 구축 · 한국 광고법 룰 셋팅</span><span class="en">Notion approval DB · Korean ad-law rules</span><span class="zh">Notion 审核数据库 · 韩国广告法规则</span></li>
+        <li><span class="ko">AI 콘텐츠 엔진 (카피·이미지·영상)</span><span class="en">AI content engine (copy + image + video)</span><span class="zh">AI 内容引擎（文案 + 图片 + 视频）</span></li>
+        <li><span class="ko">Graph API 발행 자동화 · 스케줄러</span><span class="en">Graph API publishing + scheduler</span><span class="zh">Graph API 发布 + 定时器</span></li>
+        <li><span class="ko">대표님 트레이닝 · 운영 매뉴얼</span><span class="en">Hands-on training · ops manual</span><span class="zh">手把手培训 · 运维手册</span></li>
+      </ul>
+
+    </div>
+
+    <div class="phase" style="border-left: 3px solid var(--accent);">
+      <div class="phase-mark">PHASE 2 · MONTH 3-4</div>
+      <h3 class="phase-title">
+        <span class="ko">경쟁사 인텔리전스</span>
+        <span class="en">Competitor Intel</span>
+        <span class="zh">竞品智能监控</span>
+      </h3>
+      <div class="phase-when">
+        <span class="ko">2026 년 9 월 → 10 월 출시</span>
+        <span class="en">SEPTEMBER → OCTOBER 2026</span>
+        <span class="zh">2026 年 9 月 → 10 月上线</span>
+      </div>
+      <ul class="phase-list">
+        <li><span class="ko">YouTube Data API + yt-dlp + Instaloader 통합</span><span class="en">YouTube Data API + yt-dlp + Instaloader integration</span><span class="zh">YouTube Data API + yt-dlp + Instaloader 集成</span></li>
+        <li><span class="ko">한국어 키워드 워치 리스트 (15-30 개)</span><span class="en">Korean keyword watchlist (15-30 terms)</span><span class="zh">韩文关键词监控列表（15-30 个）</span></li>
+        <li><span class="ko">Whisper 자막 자동 추출 파이프라인</span><span class="en">Whisper transcription pipeline</span><span class="zh">Whisper 自动字幕提取流水线</span></li>
+        <li><span class="ko">AI 후크 분석 · 주간 자동 리포트</span><span class="en">AI hook analysis · weekly auto-report</span><span class="zh">AI 钩子分析 · 每周自动报告</span></li>
+        <li><span class="ko">Notion 자동 인서트 · 대시보드</span><span class="en">Notion auto-insert · dashboard</span><span class="zh">Notion 自动写入 · 数据看板</span></li>
+      </ul>
+
+    </div>
+
+
+  </div>
+
+  <div class="slide-foot">
+    <span>HUGO STUDIO · 2026</span>
+    <span>ROADMAP · TIMELINE</span>
+  </div>
+</section>
+
+<!-- ╔══════════════════════════════════════════════════════════════════════╗ -->
+<!-- ║  SLIDE 10 · NEXT STEPS                                               ║ -->
+<!-- ╚══════════════════════════════════════════════════════════════════════╝ -->
+<section class="slide" data-idx="10">
+  <div class="chrome">
+    <span><b>CLOSING</b> · <span class="ko">다음 단계</span><span class="en">NEXT STEPS</span><span class="zh">下一步</span></span>
+    <span>10 / 10</span>
+  </div>
+
+  <div class="closing-layout">
+    <div class="closing-left">
+      <div class="kicker">
+        <span class="ko">다음 단계 · 함께 시작하시겠습니까?</span>
+        <span class="en">SHALL WE BEGIN?</span><span class="zh">一起开始吧？</span>
+      </div>
+      <h2>
+        <span class="ko">방향이 맞다면, <em>3 영업일</em> 안에<br>정리된 실행 계획을 보내드립니다.</span>
+        <span class="en">If the direction is right —<br>a refined plan in <em>3 business days.</em></span>
+      </h2>
+      <p class="closing-lead">
+        <span class="ko">오른쪽 4 가지 질문에 답해 주시면 정확한 일정과 범위를 정리해 드릴 수 있습니다. WhatsApp 으로 답해 주시거나 30 분 통화 일정을 잡아 주시면 됩니다.</span>
+        <span class="en">Answer the 4 questions on the right and I'll send back a refined plan with accurate timeline and scope. WhatsApp me — or let's book a 30-min call.</span><span class="zh">回答右边 4 个问题，我就能整理出准确的时间表和工作范围。WhatsApp 我，或者约个 30 分钟通话。</span>
+      </p>
+      <a href="https://wa.me/?text=Hi%20Hugo%2C%20I%20reviewed%20the%20architecture%20deck.%20Let's%20talk." target="_blank" rel="noopener noreferrer" class="closing-cta">
+        <span class="ko">WhatsApp 으로 다음 단계 시작 →</span>
+        <span class="en">START ON WHATSAPP →</span><span class="zh">在 WhatsApp 开始 →</span>
+      </a>
+    </div>
+
+    <div class="closing-questions">
+      <div class="closing-questions-title">
+        <span class="ko">계획 확정을 위한 4 가지 질문</span>
+        <span class="en">4 QUESTIONS TO LOCK THE PLAN</span><span class="zh">锁定方案的 4 个问题</span>
+      </div>
+      <ol>
+        <li>
+          <span class="ko">승인 인박스는 <b>Notion</b>·<b>Google Drive</b> 중 어떤 게 편하실까요? (저는 Notion 추천)</span>
+          <span class="en"><b>Notion</b> or <b>Google Drive</b> for approval inbox? (I'd lean Notion)</span><span class="zh">审核收件箱用 <b>Notion</b> 还是 <b>Google Drive</b>？（我建议用 Notion）</span>
+        </li>
+        <li>
+          <span class="ko">모니터링하실 한국어 키워드 10-15 개를 알려주시겠어요?</span>
+          <span class="en">10-15 Korean keywords you want to track</span><span class="zh">想监控的 10-15 个韩文关键词</span>
+        </li>
+        <li>
+          <span class="ko">경쟁사 리포트 주기 — <b>주간</b> 충분한가요? 아니면 <b>매일</b>?</span>
+          <span class="en">Weekly competitor reports OK? Or daily?</span><span class="zh">竞品报告每周一次可以吗？还是每天？</span>
+        </li>
+        <li>
+          <span class="ko">Meta Business Manager + IG Business 계정 이미 있으신가요?</span>
+          <span class="en">Already have Meta Business Manager + IG Business account?</span><span class="zh">已经有 Meta Business Manager + IG Business 账号了吗？</span>
+        </li>
+      </ol>
+    </div>
+  </div>
+
+  <div class="slide-foot">
+    <span>HUGO STUDIO · 2026 · v1.0</span>
+    <span><span class="ko">대표님께 감사드립니다</span><span class="en">THANK YOU, TIM</span><span class="zh">谢谢你，Tim</span></span>
+  </div>
+</section>
+
+<script>
+  /* Language toggle */
+  function setLang(lang) {
+    document.documentElement.setAttribute('lang', lang);
+    document.getElementById('btn-ko').classList.toggle('active', lang === 'ko');
+    document.getElementById('btn-en').classList.toggle('active', lang === 'en');
+    document.getElementById('btn-zh').classList.toggle('active', lang === 'zh');
+  }
+
+  /* Slide counter */
+  const slides = document.querySelectorAll('.slide');
+  const counter = document.getElementById('cur');
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting && entry.intersectionRatio > 0.5) {
+        const idx = entry.target.dataset.idx;
+        counter.innerText = idx.padStart(2, '0');
+      }
+    });
+  }, { threshold: [0, 0.5, 1] });
+  slides.forEach(s => observer.observe(s));
+
+  /* Keyboard navigation */
+  let currentSlide = 0;
+  function goToSlide(idx) {
+    idx = Math.max(0, Math.min(slides.length - 1, idx));
+    currentSlide = idx;
+    slides[idx].scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowDown' || e.key === 'PageDown' || e.key === ' ' || e.key === 'j') {
+      e.preventDefault();
+      goToSlide(currentSlide + 1);
+    } else if (e.key === 'ArrowUp' || e.key === 'PageUp' || e.key === 'k') {
+      e.preventDefault();
+      goToSlide(currentSlide - 1);
+    } else if (e.key === 'Home') {
+      e.preventDefault();
+      goToSlide(0);
+    } else if (e.key === 'End') {
+      e.preventDefault();
+      goToSlide(slides.length - 1);
+    } else if (e.key === 'l' || e.key === 'L') {
+      const cur = document.documentElement.lang;
+      const next = cur === 'ko' ? 'en' : (cur === 'en' ? 'zh' : 'ko');
+      setLang(next);
+    }
+  });
+
+  /* Track current via scroll */
+  let scrollTimer;
+  window.addEventListener('scroll', () => {
+    clearTimeout(scrollTimer);
+    scrollTimer = setTimeout(() => {
+      const center = window.innerHeight / 2;
+      slides.forEach((s, i) => {
+        const r = s.getBoundingClientRect();
+        if (r.top <= center && r.bottom > center) currentSlide = i;
+      });
+    }, 100);
+  });
+
+  /* Init — always Korean by default, no localStorage */
+  setLang('ko');
+
+  /* ============ GSAP Animations ============ */
+  function initAnimations() {
+    if (typeof gsap === 'undefined') {
+      // GSAP failed to load — apply fallback class to reveal everything
+      document.body.classList.add('gsap-fallback');
+      console.warn('GSAP not loaded — using fallback (everything visible).');
+      return;
+    }
+
+    gsap.registerPlugin(ScrollTrigger);
+    document.body.classList.add('gsap-ran'); // tells safety timer GSAP is alive
+
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduced) {
+      document.body.classList.add('gsap-fallback'); // reveal everything immediately
+      return;
+    }
+
+    const E = 'power3.out';
+
+    // ============ Cover slide — pure entrance animation (cover already visible) ============
+    const coverTl = gsap.timeline({ defaults: { ease: E } });
+    coverTl
+      .from('.cover .chrome', { opacity: 0, y: -20, duration: 0.6 })
+      .from('.cover .kicker', { opacity: 0, y: 14, duration: 0.5 }, '-=0.3')
+      .from('.cover .gold-bar', { scaleX: 0, transformOrigin: 'left center', duration: 0.9, ease: 'expo.out' }, '-=0.3')
+      .from('.cover h1', { opacity: 0, y: 30, duration: 0.9 }, '-=0.5')
+      .from('.cover .sub', { opacity: 0, y: 16, duration: 0.7 }, '-=0.5')
+      .from('.cover .cover-meta-item', { opacity: 0, y: 16, stagger: 0.1, duration: 0.6 }, '-=0.4');
+
+    // ============ Per-slide ScrollTrigger animations ============
+    gsap.utils.toArray('.slide:not(.cover)').forEach((slide) => {
+      const tl = gsap.timeline({
+        scrollTrigger: {
+          trigger: slide,
+          start: 'top 80%',
+          toggleActions: 'play none none reset',
+        },
+        defaults: { ease: E, duration: 0.8 }
+      });
+
+      const chrome = slide.querySelector('.chrome');
+      if (chrome) tl.from(chrome, { opacity: 0, y: -30, duration: 0.7 });
+
+      slide.querySelectorAll('.kicker, .section-label, .sys-label').forEach(el => {
+        tl.from(el, { opacity: 0, y: 20 }, '-=0.5');
+      });
+
+      const sysNum = slide.querySelector('.sys-num');
+      if (sysNum) tl.from(sysNum, { opacity: 0, scale: 0.5, rotation: -8, duration: 1, ease: 'back.out(1.7)' }, '-=0.4');
+
+      const h2 = slide.querySelector('h2');
+      if (h2) tl.from(h2, { opacity: 0, y: 40, duration: 0.9 }, '-=0.6');
+
+      const lead = slide.querySelector('.sys-lead');
+      if (lead) tl.from(lead, { opacity: 0, y: 24 }, '-=0.5');
+
+      const callout = slide.querySelector('.sys-callout');
+      if (callout) tl.from(callout, { opacity: 0, y: 24, scale: 0.95 }, '-=0.5');
+
+      const archCards = slide.querySelectorAll('.arch-card');
+      if (archCards.length) tl.from(archCards, { opacity: 0, y: 50, scale: 0.92, stagger: 0.18, duration: 0.85, ease: 'back.out(1.4)' }, '-=0.5');
+
+      const archFlow = slide.querySelector('.arch-flow');
+      if (archFlow) tl.from(archFlow, { opacity: 0, y: 20 }, '-=0.3');
+
+      const flowSteps = slide.querySelectorAll('.flow-step');
+      if (flowSteps.length) tl.from(flowSteps, { opacity: 0, x: 40, stagger: 0.12, duration: 0.6 }, '-=0.5');
+
+      const stackCards = slide.querySelectorAll('.stack-card');
+      if (stackCards.length) tl.from(stackCards, { opacity: 0, y: 40, scale: 0.88, stagger: { each: 0.06, from: 'start' }, duration: 0.6, ease: 'back.out(1.6)' }, '-=0.5');
+
+      const osRows = slide.querySelectorAll('.os-row');
+      if (osRows.length) tl.from(osRows, { opacity: 0, x: -50, stagger: 0.12, duration: 0.6 }, '-=0.5');
+      const osFoot = slide.querySelector('.os-foot');
+      if (osFoot) tl.from(osFoot, { opacity: 0, y: 30, scale: 0.95 }, '-=0.3');
+
+      const optCards = slide.querySelectorAll('.opt-card');
+      if (optCards.length) tl.from(optCards, { opacity: 0, y: 60, scale: 0.88, stagger: 0.22, duration: 0.85, ease: 'back.out(1.6)' }, '-=0.5');
+      const optCta = slide.querySelector('.opt-cta');
+      if (optCta) tl.from(optCta, { opacity: 0, y: 20 }, '-=0.3');
+
+      const phases = slide.querySelectorAll('.phase');
+      if (phases.length) tl.from(phases, { opacity: 0, y: 50, scale: 0.92, stagger: 0.25, duration: 0.85, ease: 'back.out(1.4)' }, '-=0.5');
+      const roadmapFoot = slide.querySelector('.roadmap-foot');
+      if (roadmapFoot) tl.from(roadmapFoot, { opacity: 0, y: 30 }, '-=0.3');
+
+      const closingLeft = slide.querySelectorAll('.closing-left > *');
+      if (closingLeft.length) tl.from(closingLeft, { opacity: 0, y: 30, stagger: 0.15, duration: 0.7 }, '-=0.5');
+      const closingQ = slide.querySelector('.closing-questions');
+      if (closingQ) tl.from(closingQ, { opacity: 0, x: 50, scale: 0.95, duration: 0.9 }, '-=0.7');
+    });
+
+    // ============ Hover micro-interactions ============
+    // Arch cards lift on hover (GSAP smoother than CSS transition)
+    document.querySelectorAll('.arch-card, .opt-card, .stack-card').forEach(card => {
+      card.addEventListener('mouseenter', () => {
+        gsap.to(card, { y: -4, duration: 0.3, ease: 'power2.out' });
+      });
+      card.addEventListener('mouseleave', () => {
+        gsap.to(card, { y: 0, duration: 0.3, ease: 'power2.out' });
+      });
+    });
+
+    // Refresh ScrollTrigger after fonts load (avoid measurement glitch)
+    if (document.fonts) {
+      document.fonts.ready.then(() => ScrollTrigger.refresh());
+    }
+  }
+
+  if (document.readyState === 'complete') {
+    initAnimations();
+  } else {
+    window.addEventListener('load', initAnimations);
+  }
+</script>
+
+</body>
+</html>
