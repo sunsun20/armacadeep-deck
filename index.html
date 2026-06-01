@@ -1944,10 +1944,10 @@
       const tl = gsap.timeline({
         scrollTrigger: {
           trigger: slide,
-          start: 'top 80%',
-          toggleActions: 'play none none reset',
+          start: 'top bottom',   // slide top 接触 viewport 底部就触发 (最早可能)
+          once: true,            // 一旦播放不再 reset (避免 scroll-snap 卡 bug)
         },
-        defaults: { ease: E, duration: 0.8 }
+        defaults: { ease: E, duration: 0.8, immediateRender: false }
       });
 
       const chrome = slide.querySelector('.chrome');
@@ -2017,6 +2017,15 @@
     if (document.fonts) {
       document.fonts.ready.then(() => ScrollTrigger.refresh());
     }
+
+    // 终极兜底: 滚动 5s 后强制 reveal 任何还隐藏的元素
+    setTimeout(() => {
+      ScrollTrigger.getAll().forEach(st => {
+        if (!st.animation || !st.animation.progress() || st.animation.progress() < 1) {
+          if (st.animation) st.animation.progress(1);
+        }
+      });
+    }, 5000);
   }
 
   if (document.readyState === 'complete') {
