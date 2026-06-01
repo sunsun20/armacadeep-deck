@@ -10,7 +10,6 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,600;0,8..60,700;1,8..60,400;1,8..60,500;1,8..60,600&family=DM+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Serif+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
-<script defer src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
 <script>
   // Safety net: if GSAP doesn't load within 2 seconds, reveal everything
   setTimeout(function() {
@@ -1939,68 +1938,8 @@
       .from('.cover .sub', { opacity: 0, y: 16, duration: 0.7 }, '-=0.5')
       .from('.cover .cover-meta-item', { opacity: 0, y: 16, stagger: 0.1, duration: 0.6 }, '-=0.4');
 
-    // ============ Per-slide ScrollTrigger animations ============
-    gsap.utils.toArray('.slide:not(.cover)').forEach((slide) => {
-      const tl = gsap.timeline({
-        scrollTrigger: {
-          trigger: slide,
-          start: 'top bottom',   // slide top 接触 viewport 底部就触发 (最早可能)
-          once: true,            // 一旦播放不再 reset (避免 scroll-snap 卡 bug)
-        },
-        defaults: { ease: E, duration: 0.8, immediateRender: false }
-      });
-
-      const chrome = slide.querySelector('.chrome');
-      if (chrome) tl.from(chrome, { opacity: 0, y: -30, duration: 0.7 });
-
-      slide.querySelectorAll('.kicker, .section-label, .sys-label').forEach(el => {
-        tl.from(el, { opacity: 0, y: 20 }, '-=0.5');
-      });
-
-      const sysNum = slide.querySelector('.sys-num');
-      if (sysNum) tl.from(sysNum, { opacity: 0, scale: 0.5, rotation: -8, duration: 1, ease: 'back.out(1.7)' }, '-=0.4');
-
-      const h2 = slide.querySelector('h2');
-      if (h2) tl.from(h2, { opacity: 0, y: 40, duration: 0.9 }, '-=0.6');
-
-      const lead = slide.querySelector('.sys-lead');
-      if (lead) tl.from(lead, { opacity: 0, y: 24 }, '-=0.5');
-
-      const callout = slide.querySelector('.sys-callout');
-      if (callout) tl.from(callout, { opacity: 0, y: 24, scale: 0.95 }, '-=0.5');
-
-      const archCards = slide.querySelectorAll('.arch-card');
-      if (archCards.length) tl.from(archCards, { opacity: 0, y: 50, scale: 0.92, stagger: 0.18, duration: 0.85, ease: 'back.out(1.4)' }, '-=0.5');
-
-      const archFlow = slide.querySelector('.arch-flow');
-      if (archFlow) tl.from(archFlow, { opacity: 0, y: 20 }, '-=0.3');
-
-      const flowSteps = slide.querySelectorAll('.flow-step');
-      if (flowSteps.length) tl.from(flowSteps, { opacity: 0, x: 40, stagger: 0.12, duration: 0.6 }, '-=0.5');
-
-      const stackCards = slide.querySelectorAll('.stack-card');
-      if (stackCards.length) tl.from(stackCards, { opacity: 0, y: 40, scale: 0.88, stagger: { each: 0.06, from: 'start' }, duration: 0.6, ease: 'back.out(1.6)' }, '-=0.5');
-
-      const osRows = slide.querySelectorAll('.os-row');
-      if (osRows.length) tl.from(osRows, { opacity: 0, x: -50, stagger: 0.12, duration: 0.6 }, '-=0.5');
-      const osFoot = slide.querySelector('.os-foot');
-      if (osFoot) tl.from(osFoot, { opacity: 0, y: 30, scale: 0.95 }, '-=0.3');
-
-      const optCards = slide.querySelectorAll('.opt-card');
-      if (optCards.length) tl.from(optCards, { opacity: 0, y: 60, scale: 0.88, stagger: 0.22, duration: 0.85, ease: 'back.out(1.6)' }, '-=0.5');
-      const optCta = slide.querySelector('.opt-cta');
-      if (optCta) tl.from(optCta, { opacity: 0, y: 20 }, '-=0.3');
-
-      const phases = slide.querySelectorAll('.phase');
-      if (phases.length) tl.from(phases, { opacity: 0, y: 50, scale: 0.92, stagger: 0.25, duration: 0.85, ease: 'back.out(1.4)' }, '-=0.5');
-      const roadmapFoot = slide.querySelector('.roadmap-foot');
-      if (roadmapFoot) tl.from(roadmapFoot, { opacity: 0, y: 30 }, '-=0.3');
-
-      const closingLeft = slide.querySelectorAll('.closing-left > *');
-      if (closingLeft.length) tl.from(closingLeft, { opacity: 0, y: 30, stagger: 0.15, duration: 0.7 }, '-=0.5');
-      const closingQ = slide.querySelector('.closing-questions');
-      if (closingQ) tl.from(closingQ, { opacity: 0, x: 50, scale: 0.95, duration: 0.9 }, '-=0.7');
-    });
+    // ============ Per-slide ScrollTrigger: REMOVED — caused hidden cards on scroll-snap pages ============
+    // All non-cover slides now stay visible by default. Cover keeps load animation.
 
     // ============ Hover micro-interactions ============
     // Arch cards lift on hover (GSAP smoother than CSS transition)
@@ -2013,19 +1952,7 @@
       });
     });
 
-    // Refresh ScrollTrigger after fonts load (avoid measurement glitch)
-    if (document.fonts) {
-      document.fonts.ready.then(() => ScrollTrigger.refresh());
-    }
 
-    // 终极兜底: 滚动 5s 后强制 reveal 任何还隐藏的元素
-    setTimeout(() => {
-      ScrollTrigger.getAll().forEach(st => {
-        if (!st.animation || !st.animation.progress() || st.animation.progress() < 1) {
-          if (st.animation) st.animation.progress(1);
-        }
-      });
-    }, 5000);
   }
 
   if (document.readyState === 'complete') {
