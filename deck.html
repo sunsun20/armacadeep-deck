@@ -200,9 +200,9 @@
   /* ============ Slide 02 — Big Picture ============ */
   .arch-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 24px;
-    margin-top: 4vh;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 18px;
+    margin-top: 3vh;
     flex: 1;
     align-items: stretch;
   }
@@ -223,7 +223,7 @@
   }
   .arch-card-num {
     font-family: var(--f-display);
-    font-size: 56px;
+    font-size: 48px;
     font-weight: 400;
     font-style: italic;
     color: var(--accent);
@@ -990,7 +990,7 @@
 </div>
 
 <!-- Slide Counter -->
-<div class="nav-counter"><b id="cur">01</b> / 10</div>
+<div class="nav-counter"><b id="cur">01</b> / 11</div>
 
 <!-- ╔══════════════════════════════════════════════════════════════════════╗ -->
 <!-- ║  SLIDE 01 · COVER                                                    ║ -->
@@ -1044,12 +1044,12 @@
 
   <div style="max-width: 760px;">
     <div class="kicker">
-      <span class="ko">3 개의 시스템 · 하나의 OS</span>
-      <span class="en">THREE SYSTEMS · ONE OS</span><span class="zh">三大系统 · 一个 OS</span>
+      <span class="ko">4 개의 시스템 · 하나의 OS</span>
+      <span class="en">FOUR SYSTEMS · ONE OS</span><span class="zh">四大系统 · 一个 OS</span>
     </div>
     <h2 style="font-size: clamp(1.8rem, 3.5vw, 2.6rem); margin-bottom: 16px;">
-      <span class="ko">대표님의 3 가지 요구사항에 1:1로 매핑된 구조입니다.</span>
-      <span class="en">Each of your three requirements maps to a dedicated subsystem.</span><span class="zh">你提的 3 个需求 1:1 映射到对应子系统。</span>
+      <span class="ko">대표님의 3 가지 요구사항 + 광고 자동화 — 4 개 시스템으로 완성됩니다.</span>
+      <span class="en">Your 3 requirements + ad creative automation — 4 systems total.</span><span class="zh">你提的 3 个需求 + 广告自动化 — 4 个系统组成完整 OS。</span>
     </h2>
     <p style="font-size: 15px; color: var(--fg-2); max-width: 600px;">
       <span class="ko">콘텐츠 생성·승인 워크플로우·경쟁사 모니터링 — 세 시스템이 Notion 데이터베이스를 중심으로 연결됩니다.</span>
@@ -1106,6 +1106,25 @@
       </p>
       <div class="arch-card-tech">
         yt-dlp · Instaloader · Whisper
+      </div>
+    </div>
+
+    <!-- Card 4 (NEW) -->
+    <div class="arch-card">
+      <div class="arch-card-num">IV</div>
+      <div class="arch-card-tag">SYSTEM FOUR</div>
+      <h3 class="arch-card-title">
+        <span class="ko">광고 크리에이티브 생성기</span>
+        <span class="en">Ad Creative Generator</span>
+        <span class="zh">广告素材生成器</span>
+      </h3>
+      <p class="arch-card-desc">
+        <span class="ko">경쟁사 바이럴 영상을 3 브랜드 (Enervia · Armacadip · Tensum) 의 광고 소재로 자동 변환합니다.</span>
+        <span class="en">Turns viral competitor videos into ad creatives for all 3 brands automatically.</span>
+        <span class="zh">把竞品爆款视频自动转化为 3 品牌的广告素材。</span>
+      </p>
+      <div class="arch-card-tech">
+        Hook 분해 · Midjourney prompts · Reels scripts
       </div>
     </div>
   </div>
@@ -1384,13 +1403,117 @@
   </div>
 </section>
 
+
 <!-- ╔══════════════════════════════════════════════════════════════════════╗ -->
-<!-- ║  SLIDE 06 · TECH STACK                                               ║ -->
+<!-- ║  SLIDE 06 · SYSTEM IV — AD CREATIVE GENERATOR (NEW)                  ║ -->
 <!-- ╚══════════════════════════════════════════════════════════════════════╝ -->
 <section class="slide" data-idx="6">
   <div class="chrome">
+    <span><b>SYSTEM IV</b> · <span class="ko">광고 크리에이티브 생성기</span><span class="en">AD CREATIVE GENERATOR</span><span class="zh">广告素材生成器</span></span>
+    <span>06 / 11</span>
+  </div>
+
+  <div class="sys-layout">
+    <div class="sys-left">
+      <div class="sys-num">IV</div>
+      <div class="sys-label">
+        <span class="ko">경쟁사 인사이트 → 우리 브랜드 광고</span>
+        <span class="en">COMPETITOR INSIGHTS → YOUR ADS</span>
+        <span class="zh">竞品洞察 → 你的广告</span>
+      </div>
+      <h2 class="sys-title">
+        <span class="ko">ROAS 를 좌우하는<br><em>핵심 모듈입니다.</em></span>
+        <span class="en">The piece that<br><em>moves your ROAS.</em></span>
+        <span class="zh">决定 ROAS 的<br><em>核心模块。</em></span>
+      </h2>
+      <p class="sys-lead">
+        <span class="ko">광고 비용 절감의 가장 빠른 길은 검증된 후크의 재사용입니다. 경쟁사 viral 영상의 Hook · Problem · Solution · CTA 구조를 분해해, Enervia · Armacadip · Tensum 각 브랜드의 페르소나에 맞춰 광고 카피 + Midjourney 프롬프트 + Reels 스크립트를 자동 생성합니다.</span>
+        <span class="en">The fastest way to cut ad cost is reusing proven hooks. We decompose viral competitor videos (Hook / Problem / Solution / CTA), then auto-generate ad copy + Midjourney prompts + Reels scripts tailored to each brand's persona.</span>
+        <span class="zh">降低广告成本最快的方式是复用已验证的 hook。把竞品爆款拆成 Hook/Problem/Solution/CTA 结构，再按 3 个品牌人设自动生成广告文案 + Midjourney prompt + 短视频脚本。</span>
+      </p>
+      <div class="sys-callout">
+        <span class="ko">✓ 정력 → 활력 자동 치환 (한국 광고법 준수)<br>✓ 3 브랜드 페르소나 자동 분리<br>✓ Enervia · Armacadip · Tensum 동시 생성</span>
+        <span class="en">✓ Auto-replace 정력 → 활력 (Korean ad law)<br>✓ Auto-split per brand persona<br>✓ Generates for Enervia · Armacadip · Tensum in parallel</span>
+        <span class="zh">✓ 自动替换 정력 → 활력（韩国广告法合规）<br>✓ 按 3 品牌人设自动分发<br>✓ Enervia · Armacadip · Tensum 同时生成</span>
+      </div>
+    </div>
+
+    <div class="sys-right">
+      <div style="font-family: var(--f-mono); font-size: 10px; letter-spacing: 0.22em; color: var(--accent); margin-bottom: 18px; text-transform: uppercase;">
+        <span class="ko">6 단계 자동화 흐름</span>
+        <span class="en">6-STEP AUTOMATION</span>
+        <span class="zh">6 步自动化流程</span>
+      </div>
+      <div class="flow-step">
+        <div class="flow-step-num">01.</div>
+        <div class="flow-step-text">
+          <span class="ko">System III 에서 viral 경쟁사 영상 자동 전달</span>
+          <span class="en">Viral competitor video pushed from System III</span>
+          <span class="zh">System III 自动传来 viral 竞品视频</span>
+          <span class="flow-step-sub">Auto-trigger · no manual</span>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-step-num">02.</div>
+        <div class="flow-step-text">
+          <span class="ko">Whisper 자막 추출 + 영상 프레임 캡쳐</span>
+          <span class="en">Whisper transcribes + frame snapshots</span>
+          <span class="zh">Whisper 提字幕 + 视频帧截取</span>
+          <span class="flow-step-sub">OpenAI Whisper · ffmpeg</span>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-step-num">03.</div>
+        <div class="flow-step-text">
+          <span class="ko">AI 가 스크립트 구조 분해 (<b>Hook → Problem → Solution → CTA</b>)</span>
+          <span class="en">AI decomposes script (<b>Hook → Problem → Solution → CTA</b>)</span>
+          <span class="zh">AI 拆解脚本结构（<b>Hook → Problem → Solution → CTA</b>）</span>
+          <span class="flow-step-sub">Claude / GPT-4 structured</span>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-step-num">04.</div>
+        <div class="flow-step-text">
+          <span class="ko">3 브랜드 페르소나 별 재작성 (동시 생성)</span>
+          <span class="en">Rewrite for each brand persona (parallel)</span>
+          <span class="zh">按 3 品牌人设并行重写</span>
+          <span class="flow-step-sub">Enervia · Armacadip · Tensum</span>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-step-num">05.</div>
+        <div class="flow-step-text">
+          <span class="ko"><b>Midjourney 프롬프트 5-10 개</b> + Reels 스크립트 + 자막</span>
+          <span class="en"><b>5-10 Midjourney prompts</b> + Reels scripts + subtitles</span>
+          <span class="zh"><b>5-10 个 Midjourney prompts</b> + 短视频脚本 + 字幕</span>
+          <span class="flow-step-sub">Per brand, per hook variant</span>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-step-num">06.</div>
+        <div class="flow-step-text">
+          <span class="ko">Notion DB 「Ad Drafts」 저장 → 대표님 검토</span>
+          <span class="en">Saved to Notion "Ad Drafts" → your review</span>
+          <span class="zh">存入 Notion「Ad Drafts」→ 你审核</span>
+          <span class="flow-step-sub">Status: Draft / Approve / Reject</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="slide-foot">
+    <span>HUGO STUDIO · 2026</span>
+    <span>SYSTEM IV · AD CREATIVE</span>
+  </div>
+</section>
+
+<!-- ╔══════════════════════════════════════════════════════════════════════╗ -->
+<!-- ║  SLIDE 07 · TECH STACK                                               ║ -->
+<!-- ╚══════════════════════════════════════════════════════════════════════╝ -->
+<section class="slide" data-idx="7">
+  <div class="chrome">
     <span><b>PART II</b> · <span class="ko">기술 스택</span><span class="en">TECH STACK</span><span class="zh">技术栈</span></span>
-    <span>06 / 10</span>
+    <span>07 / 11</span>
   </div>
 
   <div style="max-width: 760px;">
@@ -1487,12 +1610,12 @@
 
 
 <!-- ╔══════════════════════════════════════════════════════════════════════╗ -->
-<!-- ║  SLIDE 07 · OPEN-SOURCE STACK DETAILS                                ║ -->
+<!-- ║  SLIDE 08 · OPEN-SOURCE STACK DETAILS                                ║ -->
 <!-- ╚══════════════════════════════════════════════════════════════════════╝ -->
-<section class="slide" data-idx="7">
+<section class="slide" data-idx="8">
   <div class="chrome">
     <span><b>PART II · DETAIL</b> · <span class="ko">오픈소스 스택 상세</span><span class="en">OPEN-SOURCE STACK</span><span class="zh">开源工具栈细节</span></span>
-    <span>07 / 10</span>
+    <span>08 / 11</span>
   </div>
 
   <div style="max-width: 820px;">
@@ -1580,12 +1703,12 @@
 </section>
 
 <!-- ╔══════════════════════════════════════════════════════════════════════╗ -->
-<!-- ║  SLIDE 08 · THREE OPTIONS · TIM PICKS                                ║ -->
+<!-- ║  SLIDE 09 · THREE OPTIONS · TIM PICKS                                ║ -->
 <!-- ╚══════════════════════════════════════════════════════════════════════╝ -->
-<section class="slide" data-idx="8">
+<section class="slide" data-idx="9">
   <div class="chrome">
     <span><b>PART II · CHOICE</b> · <span class="ko">대표님이 선택</span><span class="en">YOU CHOOSE</span><span class="zh">你来选</span></span>
-    <span>08 / 10</span>
+    <span>09 / 11</span>
   </div>
 
   <div style="max-width: 820px;">
@@ -1711,10 +1834,10 @@
 <!-- ╔══════════════════════════════════════════════════════════════════════╗ -->
 <!-- ║  SLIDE 09 · ROADMAP + TIMELINE                                     ║ -->
 <!-- ╚══════════════════════════════════════════════════════════════════════╝ -->
-<section class="slide" data-idx="9">
+<section class="slide" data-idx="10">
   <div class="chrome">
     <span><b>PART III</b> · <span class="ko">로드맵 · 일정</span><span class="en">ROADMAP · TIMELINE</span><span class="zh">路线图 · 时间表</span></span>
-    <span>09 / 10</span>
+    <span>10 / 11</span>
   </div>
 
   <div style="max-width: 760px;">
@@ -1781,12 +1904,12 @@
 </section>
 
 <!-- ╔══════════════════════════════════════════════════════════════════════╗ -->
-<!-- ║  SLIDE 10 · NEXT STEPS                                               ║ -->
+<!-- ║  SLIDE 11 · NEXT STEPS                                               ║ -->
 <!-- ╚══════════════════════════════════════════════════════════════════════╝ -->
-<section class="slide" data-idx="10">
+<section class="slide" data-idx="11">
   <div class="chrome">
     <span><b>CLOSING</b> · <span class="ko">다음 단계</span><span class="en">NEXT STEPS</span><span class="zh">下一步</span></span>
-    <span>10 / 10</span>
+    <span>11 / 11</span>
   </div>
 
   <div class="closing-layout">
